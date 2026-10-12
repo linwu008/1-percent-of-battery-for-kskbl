@@ -1,4 +1,8 @@
-# 1% Battery · v0.4.0
+# 1% Battery · v0.5.0
+
+v0.5.0 基于 v0.4.0（682f81f）改造前端：原创灾后终端视觉、中央逐字剧情、选择后确认、底部资源与操作栏、Ghost 镜像。游戏引擎和规则版本仍为 0.4.0，旧存档继续兼容。
+
+操作：点击或数字键选中，确认按钮执行。↑↓ 切换，Enter 在逐字时只补全文字，读完后再次按下才确认；Escape 清除选择。已知信息与行动记录不推进时间。可开启立即显示，支持系统减少动效设置。界面仅参考叙事交互与设计语言，未使用商业游戏素材或第三方游戏源码。
 
 灾后资源决策模拟器。手机只剩 **1.000%** 电量，你要在 **8~12 步**（具体几步不告诉你）里决定这点电花在哪儿。
 每一步固定推进 **15 分钟**——就算你什么都不做，电池也在自己往下掉。
@@ -10,7 +14,8 @@ v0.4.0 的核心变化：**权重分成两层，而且两层都藏起来**。每
 
 ## 在线试玩
 
-当前版本：**https://one-percent-battery-v4.app.workbuddy.host/**
+v0.5.0 试玩交付见 [交付说明](../content/1013_v05交付说明_v1.md)。
+v0.4.0（保留用于对比）：https://one-percent-battery-v4.app.workbuddy.host/
 v0.3.0（保留用于对比）：https://one-percent-battery-v3.app.workbuddy.host/
 v0.2.0（保留用于对比）：https://one-percent-battery.app.workbuddy.host/
 
@@ -31,7 +36,7 @@ npm run dev
 ```powershell
 npm test              # 62 项规则与平衡性测试
 npm run build         # 生成静态应用
-npm run test:browser  # 12 项浏览器流程验收
+npm run test:browser  # 浏览器流程与选择确认回归
 ```
 
 浏览器测试默认使用本机 Edge。没有 Edge 时先 `npx playwright install chromium`，再以 `PLAYWRIGHT_CHANNEL=chromium` 运行。截图与日志落在本地 `test-results/`，不上传仓库。
