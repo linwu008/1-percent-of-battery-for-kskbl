@@ -59,7 +59,7 @@ export function loadProfile(): Profile {
     ) as Profile | null;
     if (
       !p ||
-      p.schema !== 3 ||
+      p.schema !== 4 ||
       !Array.isArray(p.completed) ||
       typeof p.best !== "number" ||
       !Number.isFinite(p.best) ||

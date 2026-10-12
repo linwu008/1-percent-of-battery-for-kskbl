@@ -3,6 +3,7 @@ import {
   FULL_ENERGY,
   MAX_ROUNDS,
   MIN_ROUNDS,
+  QUESTION_WEIGHT,
   STEP_MINUTES,
   SURVIVAL,
   TIER_WEIGHT,
@@ -382,13 +383,43 @@ describe("v0.3.0：权重档位与存活概率", () => {
     expect(TIER_WEIGHT.minor).toBe(1);
   });
 
-  it("每一步都记下了档位与时间", () => {
+  it("每一步都记下了动作档位、题目权重与时间", () => {
     const w = createWorld("tier");
     const s = playStraight(w, () => 1);
     for (const a of s.player.answers) {
       expect(["critical", "important", "minor"]).toContain(a.tier);
+      expect(["critical", "important", "minor"]).toContain(a.qTier);
       expect(a.minutes).toBeGreaterThan(0);
     }
+  });
+
+  it("题目权重是两层的第二层：倍率温和，且每局至少一道关键题", () => {
+    expect(QUESTION_WEIGHT.critical).toBeGreaterThan(QUESTION_WEIGHT.important);
+    expect(QUESTION_WEIGHT.important).toBeGreaterThan(QUESTION_WEIGHT.minor);
+    // 题目权重不该压过动作档位，否则玩家会觉得「输在抽题」
+    expect(QUESTION_WEIGHT.critical / QUESTION_WEIGHT.minor).toBeLessThan(
+      TIER_WEIGHT.critical / TIER_WEIGHT.minor,
+    );
+    for (let i = 0; i < 20; i++) {
+      const w = createWorld("qw" + i);
+      const tiers = Object.values(w.questionWeights);
+      expect(tiers.length).toBe(w.questions.length);
+      expect(tiers.filter((t) => t === "critical").length).toBeGreaterThan(0);
+    }
+  });
+
+  it("同一道题在不同局里权重会变——这是随机性的一部分", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const w = createWorld("qwv" + i);
+      for (const [id, t] of Object.entries(w.questionWeights)) seen.add(`${id}|${t}`);
+    }
+    const ids = new Set([...seen].map((s) => s.split("|")[0]));
+    // 一道题如果只在某一档出现过，说明权重是写死的，不是抽的
+    const multi = [...ids].filter(
+      (id) => new Set([...seen].filter((s) => s.startsWith(id + "|"))).size > 1,
+    );
+    expect(multi.length).toBeGreaterThan(5);
   });
 
   it("存活概率是三段相乘，落在 0~1 之间", () => {

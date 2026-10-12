@@ -51,6 +51,11 @@ export function tierOf(opt: Option): WeightTier {
   return opt.weight ?? defaultTier(opt.cost, !!(opt.gain || opt.gamble));
 }
 
+/** 这一道题本身的权重档位。由世界抽定，过程中不显示给玩家。 */
+export function questionTier(w: World, questionId: string): WeightTier {
+  return w.questionWeights?.[questionId] ?? "minor";
+}
+
 export function initialActor(talent: string | null = null): Actor {
   return {
     energy: FULL_ENERGY,
@@ -238,6 +243,7 @@ export function answer(
     label: opt.label,
     cost: p.cost,
     tier: p.tier,
+    qTier: questionTier(w, questionId),
     gained,
     gambled,
     note: [...texts, ...p.notes].join("；"),
@@ -255,6 +261,7 @@ export function pass(w: World, a: Actor, questionId: string): Actor {
     label: "攥着手机，什么也没做",
     cost: 0,
     tier: "minor",
+    qTier: questionTier(w, questionId),
     gained: [],
     gambled: [],
     note: "剩下这点电，哪一样都撑不起来了。时间照样往前走。",

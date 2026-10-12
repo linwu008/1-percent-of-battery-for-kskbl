@@ -21,7 +21,11 @@ export type Tag =
   | "nav"
   | "medical";
 
-/** 选项的权重档位：对存活概率的贡献倍率不同。 */
+/**
+ * 权重档位：对存活概率的贡献倍率不同。
+ * 选项有一档（这个动作本身有多重），题目也有一档（这道题在整条救援链上有多关键）。
+ * 两者都只在结算之后揭晓——过程中玩家看不到，否则就没有判断，只有算术。
+ */
 export type WeightTier = "critical" | "important" | "minor";
 
 export type Disaster =
@@ -82,6 +86,9 @@ export interface Option {
   weight?: WeightTier;
 }
 
+/** 题目权重：这一题在整条救援链上有多关键。由世界种子抽定，过程中不显示。 */
+export type QuestionWeights = Record<string, WeightTier>;
+
 export interface Question {
   id: string;
   stage: Stage;
@@ -125,6 +132,8 @@ export interface World {
   ghostTalent: string;
   /** 本局抽到的题目顺序 */
   questions: string[];
+  /** 每道题的权重档位（题目 id → 档位）。同一道题在不同局里分量不同。 */
+  questionWeights: QuestionWeights;
   /** 本局一共有几道题（8~12），属于世界的一部分，界面不直接告诉玩家 */
   rounds: number;
   version: string;
@@ -142,6 +151,8 @@ export interface AnswerLog {
   minutes: number;
   /** 该选项的权重档位 */
   tier: WeightTier;
+  /** 这一道题本身的权重档位 */
+  qTier: WeightTier;
   /** 实际生效的收益（含环境修正、赌运结果） */
   gained: Gain[];
   gambled: { outcome: OutcomeId; points: number; won: boolean }[];
@@ -162,7 +173,7 @@ export interface Actor {
 }
 
 export interface Session {
-  schema: 3;
+  schema: 4;
   id: string;
   world: World;
   ghostPersona: string;
@@ -178,7 +189,7 @@ export interface Session {
 
 /** 本地成长记录：只记玩过哪些种子、拿过的最高存活概率，不记行为画像。 */
 export interface Profile {
-  schema: 3;
+  schema: 4;
   completed: string[];
   best: number;
 }

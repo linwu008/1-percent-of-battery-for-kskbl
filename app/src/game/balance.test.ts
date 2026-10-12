@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FULL_ENERGY, OUTCOME_WEIGHTS } from "./config";
 import { QUESTION_BY_ID } from "./content/questions";
 import { PASS_INDEX, preview, visibleIndexes } from "./engine";
+import { oracleFor } from "./oracle";
 import { createSession, isDone, pickTalent, step } from "./replay";
 import { compare, summarize, survivalOf } from "./scoring";
 import { createWorld } from "./world";
@@ -134,13 +135,24 @@ describe("平衡性：1% 电量必须是真的约束", () => {
   });
 });
 
-describe("平衡性：存活概率（v0.3.0）", () => {
+describe("平衡性：存活概率（v0.4.0）", () => {
   /** 按存活概率口径跑一批种子。 */
   const surv = (pick: Pick) =>
     SEEDS.map((s) => {
       const w = createWorld(s);
       return survivalOf(play(w, pick).player, w.env);
     });
+
+  it("事后最优落在 70% 上下——理论上限够高，才有往上够的余地", () => {
+    const ps = SEEDS.map((s) => {
+      const w = createWorld(s);
+      const o = oracleFor(w);
+      return o.survival[o.survival.length - 1];
+    });
+    const mean = ps.reduce((a, b) => a + b, 0) / ps.length;
+    expect(mean, `事后最优均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.65);
+    expect(mean, `事后最优均值 ${(mean * 100).toFixed(1)}%`).toBeLessThan(0.76);
+  });
 
   it("三种打法都拿不到接近 100% 的存活概率", () => {
     for (const [name, pick] of [
@@ -150,15 +162,39 @@ describe("平衡性：存活概率（v0.3.0）", () => {
     ] as const) {
       const runs = surv(pick);
       const max = Math.max(...runs.map((r) => r.p));
-      expect(max, `${name}派最高 ${(max * 100).toFixed(1)}%`).toBeLessThan(0.8);
+      expect(max, `${name}派最高 ${(max * 100).toFixed(1)}%`).toBeLessThan(0.9);
     }
+  });
+
+  it("三段概率都还有余量，没有哪一段被压死", () => {
+    const w = createWorld("segments");
+    const o = oracleFor(w);
+    // 事后最优走完时，三段都必须在合理区间——否则乘积永远上不去
+    const last = o.survival[o.survival.length - 1];
+    expect(last).toBeGreaterThan(0.3);
+    // 真人打法的均值也必须站得住
+    const ps = surv(thrifty).map((r) => r.p);
+    const mean = ps.reduce((a, b) => a + b, 0) / ps.length;
+    expect(mean, `性价比均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.35);
+  });
+
+  it("好打法与不做事之间必须拉开明显差距", () => {
+    const idle = SEEDS.map((s) => {
+      const w = createWorld(s);
+      let sess = pickTalent(createSession(w), w.talentChoices[0]);
+      while (!isDone(sess)) sess = step(sess, PASS_INDEX);
+      return survivalOf(sess.player, w.env).p;
+    });
+    const good = surv(thrifty).map((r) => r.p);
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    expect(mean(good)).toBeGreaterThan(mean(idle) * 5);
   });
 
   it("存活概率不是清一色地低：好打法能拉开区间", () => {
     for (const pick of [spender, thrifty]) {
       const runs = surv(pick).map((r) => r.p);
       const mean = runs.reduce((a, b) => a + b, 0) / runs.length;
-      expect(mean, `均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.05);
+      expect(mean, `均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.15);
       expect(new Set(runs.map((r) => Math.round(r * 100))).size).toBeGreaterThan(10);
     }
   });

@@ -113,17 +113,41 @@ test("中途可以放弃这一局，再重开一局", async ({ page }) => {
   ).toBeNull();
 });
 
-test("结算页给出存活概率、曲线与权重公式，并停在顶部", async ({ page }) => {
+test("权重在过程中完全不显示：选项上没有档位标签", async ({ page }) => {
+  await startRun(page, "A");
+  // 选项上不该出现「最重要 / 较重要 / 不重要」这类档位标签
+  await expect(page.locator(".tag-tier")).toHaveCount(0);
+  await expect(page.locator(".choice").getByText(/^最重要$/)).toHaveCount(0);
+  // 题干区也不该出现题目权重
+  await expect(page.locator(".event-panel").getByText(/题目权重/)).toHaveCount(0);
+  // 玩一步，侧栏「上一步的结果」里也不许泄露
+  await page.locator(".choices button:not([disabled])").first().click();
+  await expect(page.locator(".last-action .tag-tier")).toHaveCount(0);
+});
+
+test("结算页揭晓两层权重、给出曲线与公式，并停在顶部", async ({ page }) => {
   await startRun(page, "A");
   await answerAll(page);
+  // 一进结算页就必须停在顶部：结果在最上面，不能让人停在最下面
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.getByTestId("player-score")).toContainText("%");
   await expect(page.getByTestId("ghost-score")).toContainText("%");
   await expect(page.locator(".survival-chart")).toBeVisible();
   await expect(page.locator(".chart-legend")).toContainText("事后最优");
-  await expect(page.getByText("权重档位")).toBeVisible();
+
+  // 两层权重都在结算页揭晓
+  await expect(page.getByText("动作档位：这个动作本身有多重")).toBeVisible();
+  await expect(
+    page.getByText("题目权重：这一题在整条救援链上有多关键"),
+  ).toBeVisible();
+
+  // 逐题对照里每一道都带题目权重
+  await page.locator(".weight-detail summary").click();
+  const rows = page.locator(".weight-detail tbody tr");
+  await expect(rows.first()).toBeVisible();
+  expect(await rows.count()).toBeGreaterThan(0);
+
   await expect(page.getByText(/存活概率与权重的完整算法/)).toBeVisible();
-  // 结果在最上面，不能让人停在最下面
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test("存储不可用时仍可玩完整一局", async ({ page }) => {

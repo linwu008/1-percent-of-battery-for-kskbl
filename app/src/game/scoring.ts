@@ -1,13 +1,14 @@
 import {
   FULL_ENERGY,
   OUTCOME_WEIGHTS,
+  QUESTION_WEIGHT,
   SURVIVAL,
   TIER_WEIGHT,
   scoreOf,
   survivalFrom,
   type SurvivalBreakdown,
 } from "./config";
-import type { Actor, Env, OutcomeId, WeightTier } from "./types";
+import type { Actor, AnswerLog, Env, OutcomeId, WeightTier } from "./types";
 
 export const OUTCOME_IDS = Object.keys(OUTCOME_WEIGHTS) as OutcomeId[];
 
@@ -19,19 +20,25 @@ export function outcomes(a: Actor): number[] {
 }
 
 /**
- * 加权贡献分：每一步贡献 = 该成果的点数 × 该选项的档位权重。
- * 同样 2 点，「最重要」的动作算 6 分，「不重要」的只算 2 分。
+ * 加权贡献分：每一步贡献 = 成果点数 × 选项档位权重 × 题目权重。
+ * 同样 2 点，落在「最重要」的关键题上算 2×3×1.5 = 9 分，
+ * 落在「不重要」的铺垫题上只有 2×1×1.0 = 2 分。
  */
 export function contributions(a: Actor): {
   found: number;
   rescue: number;
+  /** 按选项档位归类（已含题目权重的放大） */
   byTier: Record<WeightTier, number>;
+  /** 按题目权重归类 */
+  byQuestionTier: Record<WeightTier, number>;
 } {
-  const byTier: Record<WeightTier, number> = { critical: 0, important: 0, minor: 0 };
+  const zero = (): Record<WeightTier, number> => ({ critical: 0, important: 0, minor: 0 });
+  const byTier = zero();
+  const byQuestionTier = zero();
   let found = 0;
   let rescue = 0;
   for (const log of a.answers) {
-    const mul = TIER_WEIGHT[log.tier] ?? 1;
+    const mul = (TIER_WEIGHT[log.tier] ?? 1) * (QUESTION_WEIGHT[log.qTier] ?? 1);
     const gains = [
       ...log.gained.map((g) => g.points),
       ...log.gambled.filter((g) => g.won).map((g) => g.points),
@@ -39,6 +46,7 @@ export function contributions(a: Actor): {
     const add = gains.reduce((s, p) => s + p, 0) * mul;
     if (add <= 0) continue;
     byTier[log.tier] = (byTier[log.tier] ?? 0) + add;
+    byQuestionTier[log.qTier] = (byQuestionTier[log.qTier] ?? 0) + add;
     for (const g of log.gained) {
       const pts = g.points * mul;
       if (FOUND.has(g.outcome)) found += pts;
@@ -51,7 +59,17 @@ export function contributions(a: Actor): {
       if (RESCUE.has(g.outcome)) rescue += pts;
     }
   }
-  return { found, rescue, byTier };
+  return { found, rescue, byTier, byQuestionTier };
+}
+
+/** 单条答题记录的加权贡献：给结算页逐题对照用。 */
+export function logContribution(log: AnswerLog): number {
+  const mul = (TIER_WEIGHT[log.tier] ?? 1) * (QUESTION_WEIGHT[log.qTier] ?? 1);
+  const gains = [
+    ...log.gained.map((g) => g.points),
+    ...log.gambled.filter((g) => g.won).map((g) => g.points),
+  ];
+  return gains.reduce((s, p) => s + p, 0) * mul;
 }
 
 export function survivalOf(a: Actor, env: Env): SurvivalBreakdown {

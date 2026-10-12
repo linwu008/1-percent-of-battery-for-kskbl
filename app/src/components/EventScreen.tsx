@@ -6,7 +6,6 @@ import {
   OUTCOME_LABELS,
   OUTCOME_WEIGHTS,
   STEP_MINUTES,
-  TIER_LABELS,
   idleDrain,
 } from "../game/config";
 import { hasAffordable, preview, visibleIndexes } from "../game/engine";
@@ -178,8 +177,8 @@ export default function EventScreen({
             <div className="choice-heading">
               你的选择{" "}
               <span>
-                标价已按当前环境折算 · 权重档位决定它对存活概率的贡献 · 可按 1–
-                {options.length} 键
+                标价已按当前环境折算 · 每道题和每个动作的分量要到结算后才揭晓 · 可按
+                1–{options.length} 键
               </span>
             </div>
             {options.map(({ index, option, p }, i) => (
@@ -197,9 +196,6 @@ export default function EventScreen({
                   <strong>{option.label}</strong>
                   <small>{option.detail}</small>
                   <span className="choice-tags">
-                    <em className={`tag-tier tier-${p.tier}`}>
-                      {TIER_LABELS[p.tier]}
-                    </em>
                     {option.gain && (
                       <em className="tag-gain">
                         {OUTCOME_LABELS[option.gain.outcome]} +{option.gain.points}
@@ -292,7 +288,6 @@ export default function EventScreen({
                   <div>
                     <strong>{l.label}</strong>{" "}
                     <span className="log-cost">−{money(l.cost)}</span>
-                    <em className={`tag-tier tier-${l.tier}`}>{TIER_LABELS[l.tier]}</em>
                     <p>{l.note}</p>
                   </div>
                 </li>
@@ -309,6 +304,8 @@ export default function EventScreen({
               实际耗电与收益会被灾种、信号、伤势、温度、时段、随身物改写。
               赌运对双方一致——你和 Ghost 在同一选项上抽到同一个结果，
               所以差距只来自选择。
+              每道题、每个动作都带着自己的权重，但过程中不告诉你：
+              哪一步真正关键，得你自己判断。结算时全部摊开，可以复算。
             </p>
           </details>
         </aside>

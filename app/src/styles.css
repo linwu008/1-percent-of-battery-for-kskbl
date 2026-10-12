@@ -1990,6 +1990,57 @@ button.danger:hover {
   font-size: 20px;
   margin: 8px 0 12px;
 }
+/* 两层权重：小节标题与逐题对照 */
+.weight-sub {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 22px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.weight-sub:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.weight-detail {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.weight-detail summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  list-style: none;
+}
+.weight-detail summary::-webkit-details-marker {
+  display: none;
+}
+.weight-detail summary::before {
+  content: "▸ ";
+  color: var(--amber);
+}
+.weight-detail[open] summary::before {
+  content: "▾ ";
+}
+.weight-detail summary span {
+  color: var(--amber);
+  margin-left: 6px;
+}
+.weight-detail table {
+  margin-top: 12px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.weight-detail th,
+.weight-detail td {
+  padding: 7px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
 
 /* 存活概率曲线与三段概率条 */
 .chart-panel {

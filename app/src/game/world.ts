@@ -1,9 +1,14 @@
-import { MAX_ROUNDS, MIN_ROUNDS, RULE_VERSION } from "./config";
+import {
+  MAX_ROUNDS,
+  MIN_ROUNDS,
+  QUESTION_WEIGHT_MIX,
+  RULE_VERSION,
+} from "./config";
 import { TALENTS } from "./content/talents";
 import { PERSONAS } from "./content/personas";
 import { QUESTIONS } from "./content/questions";
 import { pick, shuffle } from "./rng";
-import type { Env, World } from "./types";
+import type { Env, QuestionWeights, WeightTier, World } from "./types";
 
 const DISASTERS = ["earthquake", "flood", "fire", "mudslide", "typhoon", "avalanche"] as const;
 const NETWORKS = ["flicker", "weak", "dead", "local"] as const;
@@ -66,6 +71,33 @@ function presetQuestions(rounds: number): string[] {
   return ids;
 }
 
+/**
+ * 给本局的每道题抽一个权重档位。
+ * 同一道题在这一局是关键题，在下一局可能只是铺垫——这是肉鸽的随机性来源之一。
+ * 配额按 QUESTION_WEIGHT_MIX，但至少保证有一道关键题，否则这一局没有真正的赌注。
+ */
+export function drawWeights(seed: string, ids: string[]): QuestionWeights {
+  const n = ids.length;
+  if (n === 0) return {};
+  let critical = Math.max(1, Math.round(n * QUESTION_WEIGHT_MIX.critical));
+  let important = Math.round(n * QUESTION_WEIGHT_MIX.important);
+  if (critical + important > n) {
+    important = n - critical;
+    if (important < 0) {
+      critical = n;
+      important = 0;
+    }
+  }
+  const minor = Math.max(0, n - critical - important);
+  const bag: WeightTier[] = [
+    ...Array<WeightTier>(critical).fill("critical"),
+    ...Array<WeightTier>(important).fill("important"),
+    ...Array<WeightTier>(minor).fill("minor"),
+  ];
+  const order = shuffle(seed, "qweight", bag);
+  return Object.fromEntries(ids.map((id, i) => [id, order[i] ?? "minor"]));
+}
+
 export function createWorld(seed: string, preset?: "A" | "B"): World {
   if (!seed || seed.length > 128) throw new Error("无效的世界编号");
   const env: Env = preset
@@ -82,6 +114,8 @@ export function createWorld(seed: string, preset?: "A" | "B"): World {
   const rounds = preset
     ? PRESET_ROUNDS[preset]
     : MIN_ROUNDS + Math.floor(hash01(seed, "rounds") * (MAX_ROUNDS - MIN_ROUNDS + 1));
+  // 固定案例的题目顺序也固定，演示与测试才复现得了。
+  const questions = preset ? presetQuestions(rounds) : drawQuestions(seed, rounds);
   return {
     seed,
     preset,
@@ -89,8 +123,8 @@ export function createWorld(seed: string, preset?: "A" | "B"): World {
     talentChoices: shuffle(seed, "talents", talentIds).slice(0, 3),
     ghostPersona: pick(seed, "persona", PERSONAS.map((p) => p.id)),
     ghostTalent: pick(seed, "gtalent", talentIds),
-    // 固定案例的题目顺序也固定，演示与测试才复现得了。
-    questions: preset ? presetQuestions(rounds) : drawQuestions(seed, rounds),
+    questions,
+    questionWeights: drawWeights(seed, questions),
     rounds,
     version: RULE_VERSION,
   };

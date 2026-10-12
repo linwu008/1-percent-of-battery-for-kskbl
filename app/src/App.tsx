@@ -52,7 +52,7 @@ export default function App() {
   const record = (s: Session) => {
     const p0 = survivalOf(s.player, s.world.env).p;
     setProfile((p) => ({
-      schema: 3,
+      schema: 4,
       completed: p.completed.includes(s.world.seed)
         ? p.completed
         : [...p.completed, s.world.seed],

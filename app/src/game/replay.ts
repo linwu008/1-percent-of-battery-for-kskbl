@@ -11,7 +11,7 @@ export function createSession(
   practice = false,
 ): Session {
   return {
-    schema: 3,
+    schema: 4,
     id: crypto.randomUUID(),
     world,
     ghostPersona: world.ghostPersona,
@@ -85,7 +85,7 @@ export function verifyExport(data: unknown): Session {
   if (!data || typeof data !== "object") throw new Error("存档格式无效");
   const s = data as Session;
   if (
-    s.schema !== 3 ||
+    s.schema !== 4 ||
     s.world?.version !== RULE_VERSION ||
     typeof s.id !== "string" ||
     typeof s.practice !== "boolean" ||

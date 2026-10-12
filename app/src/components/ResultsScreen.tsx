@@ -3,6 +3,7 @@ import {
   OUTCOME_LABELS,
   OUTCOME_THRESHOLD,
   OUTCOME_WEIGHTS,
+  QUESTION_WEIGHT,
   STEP_MINUTES,
   SURVIVAL,
   TIER_LABELS,
@@ -11,7 +12,13 @@ import {
 import { QUESTION_BY_ID } from "../game/content/questions";
 import { PERSONA_BY_ID } from "../game/content/personas";
 import { TALENT_BY_ID } from "../game/content/talents";
-import { compare, contributions, outcomes, survivalSeries } from "../game/scoring";
+import {
+  compare,
+  contributions,
+  logContribution,
+  outcomes,
+  survivalSeries,
+} from "../game/scoring";
 import { envSummary } from "../game/world";
 import SurvivalChart from "./SurvivalChart";
 import type { OutcomeId, Profile, Session, WeightTier } from "../game/types";
@@ -259,8 +266,14 @@ export default function ResultsScreen({
       </div>
 
       <section className="panel weight-panel">
-        <div className="eyebrow">WEIGHTS / 权重档位</div>
-        <h2>同样是 2 点，档位不同，分量差三倍。</h2>
+        <div className="eyebrow">WEIGHTS / 权重</div>
+        <h2>同样是 2 点，档位不同，分量差好几倍。</h2>
+        <p className="table-note">
+          这两张表在游戏过程中是藏起来的——哪一步真正关键，当时只能靠判断。
+          现在摊开，你可以回头看自己把力气花在了哪儿。
+        </p>
+
+        <h3 className="weight-sub">动作档位：这个动作本身有多重</h3>
         <table>
           <thead>
             <tr>
@@ -283,6 +296,75 @@ export default function ResultsScreen({
             ))}
           </tbody>
         </table>
+
+        <h3 className="weight-sub">题目权重：这一题在整条救援链上有多关键</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>档位</th>
+              <th>倍率</th>
+              <th>你的加权贡献</th>
+              <th>Ghost 的加权贡献</th>
+              <th>本局几道</th>
+            </tr>
+          </thead>
+          <tbody>
+            {TIERS.map((t) => (
+              <tr key={t}>
+                <td className={`tier-cell tier-${t}`}>{TIER_LABELS[t]}</td>
+                <td className="dim">×{QUESTION_WEIGHT[t]}</td>
+                <td>{mine.byQuestionTier[t].toFixed(1)}</td>
+                <td>{theirs.byQuestionTier[t].toFixed(1)}</td>
+                <td>
+                  {s.player.answers.filter((a) => a.qTier === t).length} 道
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <details className="weight-detail">
+          <summary>
+            逐题对照：每一道的分量与你在它上面拿到的贡献{" "}
+            <span>{s.player.answers.length} 道</span>
+          </summary>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>题目</th>
+                <th>题目权重</th>
+                <th>动作档位</th>
+                <th>你的贡献</th>
+                <th>Ghost 的贡献</th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.player.answers.map((l, i) => {
+                const theirsLog = s.ghost.answers[i];
+                return (
+                  <tr key={i}>
+                    <td className="dim">{String(i + 1).padStart(2, "0")}</td>
+                    <td>
+                      {QUESTION_BY_ID[l.questionId]?.prompt[0].slice(0, 20) ??
+                        l.questionId}
+                      …
+                    </td>
+                    <td className={`tier-cell tier-${l.qTier}`}>
+                      {TIER_LABELS[l.qTier]} ×{QUESTION_WEIGHT[l.qTier]}
+                    </td>
+                    <td className={`tier-cell tier-${l.tier}`}>
+                      {TIER_LABELS[l.tier]} ×{TIER_WEIGHT[l.tier]}
+                    </td>
+                    <td>{logContribution(l).toFixed(1)}</td>
+                    <td>{theirsLog ? logContribution(theirsLog).toFixed(1) : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </details>
+
         <p className="table-note">
           被发现贡献：你 {mine.found.toFixed(1)} / {SURVIVAL.foundFull}；被救出贡献：你{" "}
           {mine.rescue.toFixed(1)} / {SURVIVAL.rescueFull}。Ghost 分别是{" "}
@@ -353,14 +435,16 @@ export default function ResultsScreen({
         <p>
           P(被发现) = {SURVIVAL.foundBase} + {SURVIVAL.foundSpan} ×（被发现贡献 ÷{" "}
           {SURVIVAL.foundFull}），上限 0.95。
-          被发现贡献 = Σ（位置送达 / 光信号起作用 / 人数送达 的点数 × 档位权重）
-          ——本局你拿到 {mine.found.toFixed(1)}，所以这一项 = {pct(result.ps.found)}。
+          被发现贡献 = Σ（位置送达 / 光信号起作用 / 人数送达 的点数 × 动作档位 ×
+          题目权重）——本局你拿到 {mine.found.toFixed(1)}，所以这一项 ={" "}
+          {pct(result.ps.found)}。
         </p>
         <p>
           P(被救出) = {SURVIVAL.rescueBase} + {SURVIVAL.rescueSpan} ×（被救出贡献 ÷{" "}
           {SURVIVAL.rescueFull}），上限 0.95。
-          被救出贡献 = Σ（安排已传达 / 回联确认 / 接力送达 的点数 × 档位权重）
-          ——本局你拿到 {mine.rescue.toFixed(1)}，所以这一项 = {pct(result.ps.rescue)}。
+          被救出贡献 = Σ（安排已传达 / 回联确认 / 接力送达 的点数 × 动作档位 ×
+          题目权重）——本局你拿到 {mine.rescue.toFixed(1)}，所以这一项 ={" "}
+          {pct(result.ps.rescue)}。
         </p>
         <p>
           P(撑到救援) = {SURVIVAL.endureBase} + {SURVIVAL.endureSpan} ×
@@ -373,19 +457,33 @@ export default function ResultsScreen({
           这一项 = {pct(result.ps.endure)}。
         </p>
         <p>
-          <b>档位权重（第九条改动的核心）：</b>
-          每一步的贡献 = 该成果的实际点数 × 该选项的档位倍率。
-          最重要 ×{TIER_WEIGHT.critical}，较重要 ×{TIER_WEIGHT.important}，
-          不重要 ×{TIER_WEIGHT.minor}。
-          一个不耗电的「不重要」动作拿 2 点只算 2 分；
-          一个耗电的「最重要」动作拿 2 点算 6 分。
-          本局你在三档上的加权贡献分别是{" "}
-          {mine.byTier.critical.toFixed(1)} / {mine.byTier.important.toFixed(1)} /{" "}
-          {mine.byTier.minor.toFixed(1)}。
+          <b>两层权重：</b>
+          每一步的贡献 = 该成果的实际点数 × <b>动作档位倍率</b> ×{" "}
+          <b>题目权重倍率</b>。
+          动作档位：最重要 ×{TIER_WEIGHT.critical}、较重要 ×{TIER_WEIGHT.important}、
+          不重要 ×{TIER_WEIGHT.minor}；
+          题目权重：最重要 ×{QUESTION_WEIGHT.critical}、较重要 ×
+          {QUESTION_WEIGHT.important}、不重要 ×{QUESTION_WEIGHT.minor}。
+          两层都只在结算后揭晓——过程中玩家不知道哪个动作重、也不知道哪道题关键，
+          这是要判断的部分，不是要算的部分。
+        </p>
+        <p>
+          举个数：一个「不重要」的动作落在「不重要」的题上拿 2 点，算
+          2 × {TIER_WEIGHT.minor} × {QUESTION_WEIGHT.minor} ={" "}
+          {(2 * TIER_WEIGHT.minor * QUESTION_WEIGHT.minor).toFixed(1)} 分；
+          同样 2 点，若是「最重要」的动作落在一道「最重要」的关键题上，算 2 ×{" "}
+          {TIER_WEIGHT.critical} × {QUESTION_WEIGHT.critical} ={" "}
+          {(2 * TIER_WEIGHT.critical * QUESTION_WEIGHT.critical).toFixed(1)}{" "}
+          分——差 4.5 倍。
+          本局你的动作档位贡献是 {mine.byTier.critical.toFixed(1)} /{" "}
+          {mine.byTier.important.toFixed(1)} / {mine.byTier.minor.toFixed(1)}，
+          题目权重贡献是 {mine.byQuestionTier.critical.toFixed(1)} /{" "}
+          {mine.byQuestionTier.important.toFixed(1)} /{" "}
+          {mine.byQuestionTier.minor.toFixed(1)}。
         </p>
         <p>
           耗电口径：实际耗电 = 名义标价 × 环境倍率（温度 1.0~1.25，亮屏类再乘信号倍率
-          1.0~1.3）× 整体倍率 1.5，再算天赋折扣；
+          1.0~1.3）× 整体倍率 1.3，再算天赋折扣；
           此外每 {STEP_MINUTES} 分钟固定自然损耗 {money(result.player.idle)} 级别的电
           （本局每步 {s.player.answers[0]?.idleDrain ?? 0} 格），不操作也掉。
         </p>

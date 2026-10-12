@@ -1,6 +1,6 @@
 import type { Env, Tag, WeightTier } from "./types";
 
-export const RULE_VERSION = "0.3.0";
+export const RULE_VERSION = "0.4.0";
 
 /** 电量内部以 0.001% 记账。满值 1000 即屏幕上的 1.000%。 */
 export const FULL_ENERGY = 1000;
@@ -63,6 +63,24 @@ export const TIER_LABELS: Record<WeightTier, string> = {
   critical: "最重要",
   important: "较重要",
   minor: "不重要",
+};
+
+/**
+ * 题目权重倍率：这一题在整条救援链上有多关键。
+ * 倍率刻意比选项档位温和（1.5 / 1.2 / 1.0 而不是 3 / 2 / 1）——
+ * 具体动作的分量应该盖过题目本身的分量，否则玩家会觉得「输在抽题」而不是「输在判断」。
+ */
+export const QUESTION_WEIGHT: Record<WeightTier, number> = {
+  critical: 1.5,
+  important: 1.2,
+  minor: 1.0,
+};
+
+/** 每局分配题目权重的比例：约三成关键题，三成半较重要，其余不重要。 */
+export const QUESTION_WEIGHT_MIX: Record<WeightTier, number> = {
+  critical: 0.3,
+  important: 0.35,
+  minor: 0.35,
 };
 
 /**
@@ -135,21 +153,25 @@ export function costFactor(env: Env, tags: Tag[]): number {
 export const SURVIVAL = {
   foundOutcomes: ["position", "light", "people"] as const,
   rescueOutcomes: ["brief", "ack", "relay"] as const,
-  // 归一化用的满值：由离线标定得出，好打法能接近但很难打满
-  foundFull: 15,
-  rescueFull: 10,
-  foundBase: 0.18,
-  foundSpan: 0.85,
-  rescueBase: 0.22,
-  rescueSpan: 0.78,
-  endureBase: 0.66,
+  /*
+   * 归一化满值与各段跨度由离线标定（60 种子 × 4 打法 + 事后最优）得出，
+   * 目标是「事后最优 ≈ 70%」——理论上限够高，玩家才有往上够的余地；
+   * 同时三段各自都在 0.84~0.93 之间，没有任何一段被压死。
+   */
+  foundFull: 11,
+  rescueFull: 7.5,
+  foundBase: 0.21,
+  foundSpan: 0.87,
+  rescueBase: 0.24,
+  rescueSpan: 0.85,
+  endureBase: 0.78,
   endureSpan: 0.42,
   /** 每多推进 15 分钟，撑到救援的概率掉一点 */
-  timeStepPenalty: 0.012,
-  injuryPenalty: { none: 0, scratch: 0.02, fracture: 0.08, bleeding: 0.16 },
-  tempPenalty: { cool: 0, sultry: 0.02, hot: 0.06, freezing: 0.1 },
+  timeStepPenalty: 0.009,
+  injuryPenalty: { none: 0, scratch: 0.018, fracture: 0.05, bleeding: 0.1 },
+  tempPenalty: { cool: 0, sultry: 0.012, hot: 0.035, freezing: 0.055 },
   /** 手机彻底关机：最后那点联系能力也没了，这是最狠的一项惩罚 */
-  blackoutPenalty: 0.25,
+  blackoutPenalty: 0.15,
 } as const;
 
 export const LABELS = {
