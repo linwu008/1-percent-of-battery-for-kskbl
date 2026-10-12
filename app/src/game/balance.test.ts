@@ -3,7 +3,7 @@ import { FULL_ENERGY, OUTCOME_WEIGHTS } from "./config";
 import { QUESTION_BY_ID } from "./content/questions";
 import { PASS_INDEX, preview, visibleIndexes } from "./engine";
 import { createSession, isDone, pickTalent, step } from "./replay";
-import { compare, summarize } from "./scoring";
+import { compare, summarize, survivalOf } from "./scoring";
 import { createWorld } from "./world";
 import type { Session, World } from "./types";
 
@@ -105,13 +105,13 @@ describe("平衡性：1% 电量必须是真的约束", () => {
     const labels = SEEDS.map((s) => {
       const w = createWorld(s);
       const done = play(w, thrifty);
-      return compare(done.player, done.ghost).label;
+      return compare(done.player, done.ghost, w.env).label;
     });
     expect(new Set(labels).size).toBeGreaterThan(1);
     expect(labels.filter((l) => l === "落后镜像").length).toBeLessThan(SEEDS.length);
   });
 
-  it("十道题全走最贵的路必然破产——取舍由此而来", () => {
+  it("全走最贵的路必然破产——取舍由此而来", () => {
     let broke = 0;
     for (const s of SEEDS) {
       const w = createWorld(s);
@@ -131,5 +131,44 @@ describe("平衡性：1% 电量必须是真的约束", () => {
       }
     }
     expect(broke).toBeGreaterThan(SEEDS.length * 0.5);
+  });
+});
+
+describe("平衡性：存活概率（v0.3.0）", () => {
+  /** 按存活概率口径跑一批种子。 */
+  const surv = (pick: Pick) =>
+    SEEDS.map((s) => {
+      const w = createWorld(s);
+      return survivalOf(play(w, pick).player, w.env);
+    });
+
+  it("三种打法都拿不到接近 100% 的存活概率", () => {
+    for (const [name, pick] of [
+      ["激进", spender],
+      ["保守", miser],
+      ["性价比", thrifty],
+    ] as const) {
+      const runs = surv(pick);
+      const max = Math.max(...runs.map((r) => r.p));
+      expect(max, `${name}派最高 ${(max * 100).toFixed(1)}%`).toBeLessThan(0.8);
+    }
+  });
+
+  it("存活概率不是清一色地低：好打法能拉开区间", () => {
+    for (const pick of [spender, thrifty]) {
+      const runs = surv(pick).map((r) => r.p);
+      const mean = runs.reduce((a, b) => a + b, 0) / runs.length;
+      expect(mean, `均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.05);
+      expect(new Set(runs.map((r) => Math.round(r * 100))).size).toBeGreaterThan(10);
+    }
+  });
+
+  it("耗电更强的版本下，激进派确实会被电量卡住", () => {
+    const runs = SEEDS.map((s) => {
+      const w = createWorld(s);
+      return play(w, spender).player;
+    });
+    const drained = runs.filter((a) => a.energy < FULL_ENERGY * 0.15).length;
+    expect(drained).toBeGreaterThan(0);
   });
 });

@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { RULE_VERSION } from "./game/config";
 import { createWorld } from "./game/world";
 import { createSession, finish, isDone, pickTalent, step } from "./game/replay";
+import { attachOracle } from "./game/oracle";
 import { emptyProfile } from "./game/ghost";
-import { summarize } from "./game/scoring";
+import { survivalOf } from "./game/scoring";
 import {
   loadSession,
   storeSession,
+  clearSession,
   loadProfile,
   storeProfile,
 } from "./game/storage";
@@ -46,15 +48,15 @@ export default function App() {
       setError("进度暂时无法保存，本次会话仍可继续。");
   }, [profile]);
 
-  /** 一局结束时记录种子与最高分。 */
+  /** 一局结束时记录种子与最高存活概率。 */
   const record = (s: Session) => {
-    const score = summarize(s.player).score;
+    const p0 = survivalOf(s.player, s.world.env).p;
     setProfile((p) => ({
-      schema: 2,
+      schema: 3,
       completed: p.completed.includes(s.world.seed)
         ? p.completed
         : [...p.completed, s.world.seed],
-      best: Math.max(p.best, score),
+      best: Math.max(p.best, p0),
     }));
   };
 
@@ -78,10 +80,14 @@ export default function App() {
     if (!session || lock.current) return;
     lock.current = true;
     try {
-      const next = step(session, index);
+      let next = step(session, index);
+      // 一局结束才补上事后最优参考线，过程中不浪费算力
+      if (isDone(next)) {
+        next = attachOracle(next);
+        record(next);
+      }
       setSession(next);
       setError(null);
-      if (isDone(next)) record(next);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -94,7 +100,7 @@ export default function App() {
     if (!session || lock.current) return;
     lock.current = true;
     try {
-      const next = finish(session);
+      const next = attachOracle(finish(session));
       setSession(next);
       record(next);
     } catch (e) {
@@ -103,6 +109,14 @@ export default function App() {
     queueMicrotask(() => {
       lock.current = false;
     });
+  };
+
+  /** 中途放弃：清掉这一局的存档，回到开始页重开。 */
+  const abandon = () => {
+    clearSession();
+    setSession(null);
+    setHome(true);
+    setError("上一局已放弃，没有计入记录。");
   };
 
   const pick = (talentId: string) => {
@@ -163,7 +177,12 @@ export default function App() {
           onReplay={replay}
         />
       ) : (
-        <EventScreen session={session} onChoose={choose} onDrain={drain} />
+        <EventScreen
+          session={session}
+          onChoose={choose}
+          onDrain={drain}
+          onAbandon={abandon}
+        />
       )}
       <footer className="site-footer">
         <span>一份电量，两种人生。</span>

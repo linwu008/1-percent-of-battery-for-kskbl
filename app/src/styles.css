@@ -1892,3 +1892,185 @@ td:not(:first-child) {
     overflow-x: auto;
   }
 }
+
+/* ───────────────────────── v0.3.0 新增 ───────────────────────── */
+
+/* 开局背景：先把处境讲清楚，玩家才看得懂题 */
+.backdrop-card {
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.backdrop-line {
+  font-size: 14px;
+  line-height: 1.95;
+  color: #d3dbd5;
+  min-height: 1.9em;
+  margin: 0 0 8px;
+}
+.backdrop-rule {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+/* 中途放弃并重开 */
+.give-up-button {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-left: auto;
+}
+.give-up-button:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.give-up-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border: 1px solid var(--amber);
+  border-radius: 9px;
+  background: #1a1710;
+  font-size: 13px;
+}
+button.danger {
+  background: none;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+button.danger:hover {
+  background: var(--amber);
+  color: #101410;
+}
+.chapter-unknown {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 权重档位 */
+.tag-tier {
+  color: var(--muted);
+}
+.tag-tier.tier-critical {
+  color: #ff9f8a;
+  border-color: rgba(255, 159, 138, 0.4);
+}
+.tag-tier.tier-important {
+  color: var(--amber);
+  border-color: rgba(229, 189, 126, 0.35);
+}
+.tier-cell.tier-critical {
+  color: #ff9f8a;
+}
+.tier-cell.tier-important {
+  color: var(--amber);
+}
+.tier-cell.tier-minor {
+  color: var(--muted);
+}
+.weight-panel {
+  padding: 24px 26px;
+  margin: 18px 0;
+}
+.weight-panel h2 {
+  font-size: 20px;
+  margin: 8px 0 12px;
+}
+
+/* 存活概率曲线与三段概率条 */
+.chart-panel {
+  padding: 24px 26px;
+  margin: 24px 0;
+}
+.chart-panel h2 {
+  font-size: 20px;
+  margin: 10px 0 4px;
+}
+.survival-chart {
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
+  overflow: visible;
+}
+.legend-item::before {
+  content: "";
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--muted);
+}
+.legend-item.oracle::before {
+  background: #e5bd7e;
+}
+.legend-item.you::before {
+  background: #b5edb8;
+}
+.legend-item.ghost::before {
+  background: #bdb0e0;
+}
+.survival-bars {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+.sbar {
+  display: grid;
+  grid-template-columns: 66px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.sbar small {
+  color: var(--muted);
+}
+.sbar-track {
+  height: 4px;
+  background: #223029;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.sbar-track i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+}
+.score-card.ghost .sbar-track i {
+  background: var(--purple);
+}
+.sbar b {
+  text-align: right;
+  font-weight: 500;
+}
+.formula-line b {
+  color: var(--mint);
+}
+.formula p {
+  margin: 0 0 10px;
+}
+
+@media (max-width: 900px) {
+  .backdrop-card {
+    padding: 18px 16px;
+  }
+  .chart-panel,
+  .weight-panel {
+    padding: 20px 16px;
+  }
+  .give-up-button {
+    margin-left: 0;
+  }
+}

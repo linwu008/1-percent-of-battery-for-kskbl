@@ -43,6 +43,15 @@ export function storeSession(s: Session): boolean {
     return false;
   }
 }
+/** 放弃这一局：把未完成的存档清掉，不留半成品。 */
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(SESSION);
+  } catch {
+    // 清不掉也不影响继续玩
+  }
+}
+
 export function loadProfile(): Profile {
   try {
     const p = JSON.parse(
@@ -50,7 +59,7 @@ export function loadProfile(): Profile {
     ) as Profile | null;
     if (
       !p ||
-      p.schema !== 2 ||
+      p.schema !== 3 ||
       !Array.isArray(p.completed) ||
       typeof p.best !== "number" ||
       !Number.isFinite(p.best) ||

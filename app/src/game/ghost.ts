@@ -81,7 +81,7 @@ export function fullEnergyRatio(a: Actor): number {
 }
 
 export function emptyProfile(): Profile {
-  return { schema: 2, completed: [], best: 0 };
+  return { schema: 3, completed: [], best: 0 };
 }
 
 export type { Actor };

@@ -2,43 +2,19 @@ import { useEffect, useState } from "react";
 import { QUESTION_BY_ID } from "../game/content/questions";
 import { PERSONA_BY_ID } from "../game/content/personas";
 import { TALENT_BY_ID } from "../game/content/talents";
-import { OUTCOME_LABELS, OUTCOME_WEIGHTS, ROUNDS } from "../game/config";
+import {
+  OUTCOME_LABELS,
+  OUTCOME_WEIGHTS,
+  STEP_MINUTES,
+  TIER_LABELS,
+  idleDrain,
+} from "../game/config";
 import { hasAffordable, preview, visibleIndexes } from "../game/engine";
 import { pick } from "../game/rng";
 import { summarize } from "../game/scoring";
 import { envSummary } from "../game/world";
+import { useTypewriter } from "./useTypewriter";
 import type { OutcomeId, Session } from "../game/types";
-
-/**
- * 逐字显示正文。打字只影响显示，不推进进度、不消耗电量。
- * 尊重系统的「减少动效」设置，并允许随时点击跳过。
- */
-function useTypewriter(text: string, speed = 26) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    setCount(0);
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setCount(text.length);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setCount((c) => {
-        if (c >= text.length) {
-          window.clearInterval(id);
-          return c;
-        }
-        return c + 1;
-      });
-    }, speed);
-    return () => window.clearInterval(id);
-  }, [text, speed]);
-
-  const skip = () => setCount(text.length);
-  return { shown: text.slice(0, count), done: count >= text.length, skip };
-}
 
 const money = (n: number) => `${(n / 1000).toFixed(3)}%`;
 
@@ -46,10 +22,12 @@ export default function EventScreen({
   session: s,
   onChoose,
   onDrain,
+  onAbandon,
 }: {
   session: Session;
   onChoose: (index: number) => void;
   onDrain: () => void;
+  onAbandon: () => void;
 }) {
   const w = s.world;
   const qid = w.questions[s.step];
@@ -60,6 +38,10 @@ export default function EventScreen({
   const me = summarize(s.player);
   const ghost = summarize(s.ghost);
   const last = s.player.answers.at(-1);
+  const [confirming, setConfirming] = useState(false);
+
+  const idle = idleDrain(w.env);
+  const minutes = s.player.answers.length * STEP_MINUTES;
 
   const options = q
     ? visibleIndexes(w, q).map((i) => ({ index: i, option: q.options[i], p: preview(w, s.player, q, i) }))
@@ -90,10 +72,31 @@ export default function EventScreen({
           <span className="seed">#{w.seed}</span>
         </span>
         <span className="pause-note">
-          第 {s.step + 1} / {Math.min(ROUNDS, w.questions.length)} 题 ·
-          思考和阅读不耗电
+          第 {s.step + 1} 步 · 已过去 {minutes} 分钟 · 还剩几步未知 ·
+          阅读和思考不耗电
         </span>
+        <button
+          className="give-up-button"
+          onClick={() => setConfirming((v) => !v)}
+          data-testid="abandon"
+        >
+          {confirming ? "再想想" : "放弃这一局"}
+        </button>
       </div>
+
+      {confirming && (
+        <div className="give-up-box" role="alert">
+          <span>
+            放弃后本局不计入记录，你可以立刻重开一局新的。确定要放弃吗？
+          </span>
+          <button className="danger" onClick={onAbandon}>
+            确定放弃并重开
+          </button>
+          <button className="text-button" onClick={() => setConfirming(false)}>
+            继续这一局
+          </button>
+        </div>
+      )}
 
       <div className="resource-bar">
         <div>
@@ -105,6 +108,9 @@ export default function EventScreen({
           <div className="energy-track">
             <i style={{ width: `${(s.player.energy / 1000) * 100}%` }} />
           </div>
+          <small>
+            每 {STEP_MINUTES} 分钟自然损耗 −{money(idle)}（不操作也掉）
+          </small>
         </div>
         <div>
           <span className="stat-label">已形成的成果</span>
@@ -121,13 +127,17 @@ export default function EventScreen({
               />
             ))}
           </div>
+          <small>已耗电 {money(me.spent)} · 自然损耗 {money(me.idle)}</small>
         </div>
         <div>
-          <span className="stat-label">你的天赋</span>
-          <strong className="talent-inline">
-            {s.player.talent ? (TALENT_BY_ID[s.player.talent]?.name ?? "—") : "—"}
-          </strong>
-          <small>已生效</small>
+          <span className="stat-label">已过去的时间</span>
+          <strong className="talent-inline">{minutes} 分钟</strong>
+          <small>
+            每一步固定 {STEP_MINUTES} 分钟 · 时间也在消耗机会
+          </small>
+          <small>
+            天赋：{s.player.talent ? (TALENT_BY_ID[s.player.talent]?.name ?? "—") : "—"}
+          </small>
         </div>
       </div>
 
@@ -149,13 +159,8 @@ export default function EventScreen({
             <span>
               {q.stage === "early" ? "Ⅰ 处境" : q.stage === "mid" ? "Ⅱ 送出" : "Ⅲ 余量"}
             </span>
-            <div className="chapter-dots">
-              {w.questions.map((_, n) => (
-                <i key={n} className={n <= s.step ? "active" : ""} />
-              ))}
-            </div>
+            <span className="chapter-unknown">后面还有几步：？</span>
           </div>
-          <h1 className="event-title">{q.id.toUpperCase()}</h1>
           <p
             className={"event-story" + (typed.done ? "" : " typing")}
             onClick={typed.skip}
@@ -171,7 +176,11 @@ export default function EventScreen({
 
           <div className="choices">
             <div className="choice-heading">
-              你的选择 <span>标价是名义耗电 · 实际收益受环境影响 · 可按 1–{options.length} 键</span>
+              你的选择{" "}
+              <span>
+                标价已按当前环境折算 · 权重档位决定它对存活概率的贡献 · 可按 1–
+                {options.length} 键
+              </span>
             </div>
             {options.map(({ index, option, p }, i) => (
               <button
@@ -188,6 +197,9 @@ export default function EventScreen({
                   <strong>{option.label}</strong>
                   <small>{option.detail}</small>
                   <span className="choice-tags">
+                    <em className={`tag-tier tier-${p.tier}`}>
+                      {TIER_LABELS[p.tier]}
+                    </em>
                     {option.gain && (
                       <em className="tag-gain">
                         {OUTCOME_LABELS[option.gain.outcome]} +{option.gain.points}
@@ -205,7 +217,9 @@ export default function EventScreen({
                 <span className="choice-cost">
                   <b>{p.cost ? `−${money(p.cost)}` : "不耗电"}</b>
                   <small>
-                    {p.affordable ? `做完剩 ${money(s.player.energy - p.cost)}` : "电量不够"}
+                    {p.affordable
+                      ? `做完剩 ${money(Math.max(0, s.player.energy - p.cost - p.idle))}`
+                      : "电量不够"}
                   </small>
                 </span>
                 <span className="choice-arrow">↗</span>
@@ -255,11 +269,15 @@ export default function EventScreen({
 
           {last && (
             <div className="last-action panel" aria-live="polite">
-              <span className="eyebrow">上一题的结果</span>
+              <span className="eyebrow">上一步的结果</span>
               <h3>
                 {last.label} <span>−{money(last.cost)}</span>
               </h3>
               <p>{last.note}</p>
+              <small>
+                那 {STEP_MINUTES} 分钟自然又掉了 {money(last.idleDrain)} · 此时已过去{" "}
+                {last.minutes} 分钟
+              </small>
             </div>
           )}
 
@@ -274,6 +292,7 @@ export default function EventScreen({
                   <div>
                     <strong>{l.label}</strong>{" "}
                     <span className="log-cost">−{money(l.cost)}</span>
+                    <em className={`tag-tier tier-${l.tier}`}>{TIER_LABELS[l.tier]}</em>
                     <p>{l.note}</p>
                   </div>
                 </li>
@@ -284,9 +303,12 @@ export default function EventScreen({
           <details className="journal">
             <summary>本局规则</summary>
             <p className="muted">
-              电量 1.000%，十道题。每道题的标价是名义耗电，实际收益会被灾种、信号、伤势、
-              温度、时段、随身物改写。赌运对双方一致——你和 Ghost 在同一选项上抽到同一个
-              结果，所以差距只来自选择。
+              电量 1.000%，共 8~12 步，具体几步不告诉你。每一步固定推进{" "}
+              {STEP_MINUTES} 分钟，这 {STEP_MINUTES} 分钟里电池一定会自然损耗——
+              不操作也掉，炎热、严寒、信号差都会掉得更快。选项的标价是名义耗电，
+              实际耗电与收益会被灾种、信号、伤势、温度、时段、随身物改写。
+              赌运对双方一致——你和 Ghost 在同一选项上抽到同一个结果，
+              所以差距只来自选择。
             </p>
           </details>
         </aside>

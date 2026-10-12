@@ -21,6 +21,9 @@ export type Tag =
   | "nav"
   | "medical";
 
+/** 选项的权重档位：对存活概率的贡献倍率不同。 */
+export type WeightTier = "critical" | "important" | "minor";
+
 export type Disaster =
   | "earthquake"
   | "flood"
@@ -30,7 +33,7 @@ export type Disaster =
   | "avalanche";
 export type Network = "flicker" | "weak" | "dead" | "local";
 export type Injury = "none" | "scratch" | "fracture" | "bleeding";
-export type Temp = "freezing" | "cool" | "sultry";
+export type Temp = "freezing" | "cool" | "sultry" | "hot";
 export type Daylight = "day" | "dusk" | "night";
 export type Carry = "none" | "pen" | "torch" | "powerbank";
 
@@ -67,7 +70,7 @@ export interface EnvRule {
 export interface Option {
   label: string;
   detail: string;
-  /** 电量成本，单位 0.001%。 */
+  /** 名义电量成本，单位 0.001%。实际成本还受环境与天赋改写。 */
   cost: number;
   tags: Tag[];
   gain?: Gain;
@@ -75,6 +78,8 @@ export interface Option {
   env?: EnvRule[];
   /** 只有环境匹配时才出现；不满足则该选项不列出。 */
   onlyIf?: { key: keyof Env; in: string[] };
+  /** 权重档位。没写就按成本与是否有收益推一个（见 config.defaultTier）。 */
+  weight?: WeightTier;
 }
 
 export interface Question {
@@ -120,6 +125,8 @@ export interface World {
   ghostTalent: string;
   /** 本局抽到的题目顺序 */
   questions: string[];
+  /** 本局一共有几道题（8~12），属于世界的一部分，界面不直接告诉玩家 */
+  rounds: number;
   version: string;
 }
 
@@ -127,12 +134,21 @@ export interface AnswerLog {
   questionId: string;
   optionIndex: number;
   label: string;
+  /** 这一下动作本身耗掉的电 */
   cost: number;
+  /** 这 15 分钟里自然损耗掉的电（不操作也掉） */
+  idleDrain: number;
+  /** 做完这一步时已经过去多少分钟 */
+  minutes: number;
+  /** 该选项的权重档位 */
+  tier: WeightTier;
   /** 实际生效的收益（含环境修正、赌运结果） */
   gained: Gain[];
   gambled: { outcome: OutcomeId; points: number; won: boolean }[];
   note: string;
   energyAfter: number;
+  /** 这一步结束时的存活概率估计（0~1），用于画曲线 */
+  survival: number;
 }
 
 export interface Actor {
@@ -146,7 +162,7 @@ export interface Actor {
 }
 
 export interface Session {
-  schema: 2;
+  schema: 3;
   id: string;
   world: World;
   ghostPersona: string;
@@ -155,12 +171,14 @@ export interface Session {
   ghost: Actor;
   /** 玩家已作答数量；Ghost 只同步到这里 */
   step: number;
+  /** 事后最优参考线：每步的最优存活概率与当时电量 */
+  oracle: { survival: number[]; energy: number[]; talent: string | null };
   ending: string | null;
 }
 
-/** 本地成长记录：只记玩过哪些种子、拿过的最高分，不记行为画像。 */
+/** 本地成长记录：只记玩过哪些种子、拿过的最高存活概率，不记行为画像。 */
 export interface Profile {
-  schema: 2;
+  schema: 3;
   completed: string[];
   best: number;
 }

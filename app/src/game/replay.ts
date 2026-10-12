@@ -1,4 +1,4 @@
-import { RULE_VERSION, ROUNDS } from "./config";
+import { RULE_VERSION } from "./config";
 import { answer, initialActor, PASS_INDEX, pass } from "./engine";
 import { ghostUpTo } from "./ghost";
 import { createWorld } from "./world";
@@ -11,7 +11,7 @@ export function createSession(
   practice = false,
 ): Session {
   return {
-    schema: 2,
+    schema: 3,
     id: crypto.randomUUID(),
     world,
     ghostPersona: world.ghostPersona,
@@ -20,8 +20,15 @@ export function createSession(
     player: initialActor(null),
     ghost: ghostUpTo(world, 0, world.ghostPersona, world.ghostTalent),
     step: 0,
+    // 参考线等一局结束时再算，中间过程不浪费时间
+    oracle: { survival: [], energy: [], talent: null },
     ending: null,
   };
+}
+
+/** 本局一共几道题：由世界决定，8~12 之间。 */
+export function roundsOf(s: Session): number {
+  return Math.min(s.world.rounds, s.world.questions.length);
 }
 
 export function pickTalent(s: Session, talentId: string): Session {
@@ -45,25 +52,32 @@ export function step(s: Session, optionIndex: number): Session {
     ? pass(s.world, s.player, questionId)
     : answer(s.world, s.player, questionId, optionIndex);
   const step = s.step + 1;
+  const done = step >= roundsOf(s);
   return {
     ...s,
     player,
-    // Ghost 只同步到「已完成这一题之前」——它此刻的选择玩家看不见。
-    ghost: ghostUpTo(s.world, step - 1, s.ghostPersona, s.world.ghostTalent),
+    // 过程里 Ghost 只同步到「已完成这一题之前」——它此刻的选择玩家看不见。
+    // 一局结束时它也要走完最后一步，否则结算页少一条。
+    ghost: ghostUpTo(
+      s.world,
+      done ? roundsOf(s) : step - 1,
+      s.ghostPersona,
+      s.world.ghostTalent,
+    ),
     step,
-    ending: step >= Math.min(ROUNDS, s.world.questions.length) ? "done" : null,
+    ending: done ? "done" : null,
   };
 }
 
 export function isDone(s: Session): boolean {
-  return s.step >= Math.min(ROUNDS, s.world.questions.length);
+  return s.step >= roundsOf(s);
 }
 
 /** 电量见底：把剩下的题一次性空过去，直接进结算。 */
 export function finish(s: Session): Session {
   let cur = s;
   let guard = 0;
-  while (!isDone(cur) && guard++ <= ROUNDS) cur = step(cur, PASS_INDEX);
+  while (!isDone(cur) && guard++ <= roundsOf(s) + 1) cur = step(cur, PASS_INDEX);
   return { ...cur, ending: "done" };
 }
 
@@ -71,7 +85,7 @@ export function verifyExport(data: unknown): Session {
   if (!data || typeof data !== "object") throw new Error("存档格式无效");
   const s = data as Session;
   if (
-    s.schema !== 2 ||
+    s.schema !== 3 ||
     s.world?.version !== RULE_VERSION ||
     typeof s.id !== "string" ||
     typeof s.practice !== "boolean" ||

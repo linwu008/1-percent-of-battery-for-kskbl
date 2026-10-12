@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { FULL_ENERGY, ROUNDS } from "./config";
+import {
+  FULL_ENERGY,
+  MAX_ROUNDS,
+  MIN_ROUNDS,
+  STEP_MINUTES,
+  SURVIVAL,
+  TIER_WEIGHT,
+  idleDrain,
+} from "./config";
 import { QUESTIONS, QUESTION_BY_ID } from "./content/questions";
 import { TALENTS } from "./content/talents";
 import { PERSONAS } from "./content/personas";
@@ -13,6 +21,7 @@ import {
   visibleIndexes,
 } from "./engine";
 import { ghostUpTo } from "./ghost";
+import { oracleFor } from "./oracle";
 import {
   createSession,
   finish,
@@ -21,7 +30,7 @@ import {
   step,
   verifyExport,
 } from "./replay";
-import { compare, summarize } from "./scoring";
+import { compare, summarize, survivalOf } from "./scoring";
 import { createWorld } from "./world";
 import type { Session, World } from "./types";
 
@@ -51,12 +60,21 @@ function playStraight(w: World, pick: (n: number) => number, talent?: string) {
 }
 
 describe("世界与抽题", () => {
-  it("每局抽满 10 道题，且同一编号必然复现", () => {
+  it("每局抽 8~12 道题，且同一编号必然复现", () => {
     const a = createWorld("seed-1");
     const b = createWorld("seed-1");
-    expect(a.questions).toHaveLength(ROUNDS);
+    expect(a.questions.length).toBeGreaterThanOrEqual(MIN_ROUNDS);
+    expect(a.questions.length).toBeLessThanOrEqual(MAX_ROUNDS);
+    expect(a.questions.length).toBe(a.rounds);
     expect(a).toEqual(b);
-    expect(new Set(a.questions).size).toBe(ROUNDS);
+    expect(new Set(a.questions).size).toBe(a.questions.length);
+  });
+  it("题数本身也是随机的，落在 8~12 之间且不只有一种", () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 80; i++) seen.add(createWorld("r" + i).rounds);
+    expect(Math.min(...seen)).toBeGreaterThanOrEqual(MIN_ROUNDS);
+    expect(Math.max(...seen)).toBeLessThanOrEqual(MAX_ROUNDS);
+    expect(seen.size).toBeGreaterThanOrEqual(3);
   });
   it("不同编号抽出不同的题目组合", () => {
     const seen = new Set<string>();
@@ -197,7 +215,7 @@ describe("一局流程", () => {
     expect(() => step(s, 0)).toThrow("还没有选择天赋");
     expect(() => pickTalent(s, "不存在的天赋")).toThrow();
   });
-  it("答满 10 题即结束，且 Ghost 只同步到前一题", () => {
+  it("答完全部题目即结束，过程中 Ghost 只同步到前一题", () => {
     const w = createWorld("flow2");
     let s = pickTalent(createSession(w), w.talentChoices[0]);
     while (!isDone(s)) {
@@ -207,10 +225,12 @@ describe("一局流程", () => {
       );
       s = step(s, idx ?? PASS_INDEX);
       // 玩家做到第 n 题时，Ghost 只露到第 n-1 题，避免照抄
-      expect(s.ghost.answers.length).toBe(Math.max(0, s.step - 1));
+      if (!isDone(s)) expect(s.ghost.answers.length).toBe(Math.max(0, s.step - 1));
     }
-    expect(s.step).toBe(ROUNDS);
+    expect(s.step).toBe(w.rounds);
     expect(s.ending).toBe("done");
+    // 结算时它必须走完最后一步，否则结算页会少一条记录
+    expect(s.ghost.answers.length).toBe(w.rounds);
   });
   it("电量归零也不会卡死：每一道题都还留有能做的选择", () => {
     // 题库约定：每题至少一个 0 成本选项。电量见底时它还在，玩家不会被卡在半路。
@@ -229,7 +249,7 @@ describe("一局流程", () => {
     let s = pickTalent(createSession(w), w.talentChoices[0]);
     while (!isDone(s)) s = step({ ...s, player: { ...s.player, energy: 0 } }, PASS_INDEX);
     expect(s.ending).toBe("done");
-    expect(s.player.answers.length).toBe(ROUNDS);
+    expect(s.player.answers.length).toBe(w.rounds);
     expect(s.player.answers.every((a) => a.optionIndex === PASS_INDEX)).toBe(true);
     expect(s.player.answers.every((a) => a.cost === 0)).toBe(true);
     expect(s.player.energy).toBe(0);
@@ -240,10 +260,10 @@ describe("一局流程", () => {
     const done = finish(base);
     expect(isDone(done)).toBe(true);
     expect(done.ending).toBe("done");
-    expect(done.player.answers.length).toBe(ROUNDS);
+    expect(done.player.answers.length).toBe(w.rounds);
     expect(
       done.player.answers.filter((a) => a.optionIndex === PASS_INDEX).length,
-    ).toBe(ROUNDS);
+    ).toBe(w.rounds);
   });
   it("导出记录可以重算回来", () => {
     const w = createWorld("export");
@@ -270,7 +290,7 @@ describe("评分", () => {
     const w = createWorld("score");
     const a = playStraight(w, () => 0).player;
     const b = playStraight(w, () => 0).player;
-    const c = compare(a, { ...b, energy: b.energy - 100 });
+    const c = compare(a, { ...b, energy: b.energy - 100 }, w.env);
     expect(c.player.value).toBe(c.ghost.value);
     expect(c.delta).toBeGreaterThan(0);
   });
@@ -298,11 +318,119 @@ describe("评分", () => {
     }
     expect(differ).toBeGreaterThanOrEqual(10);
   });
-  it("什么都不做的话电量留得住，但一分不得", () => {
+  it("什么都不做也留不住电：时间本身在吃电，而且一分不得", () => {
     const w = createWorld("turtle");
     let s = pickTalent(createSession(w), w.talentChoices[0]);
     while (!isDone(s)) s = step(s, PASS_INDEX);
-    expect(s.player.energy).toBe(FULL_ENERGY);
+    // 不操作不等于不耗电：每一步 15 分钟，电池自己往下掉
+    expect(s.player.energy).toBeLessThan(FULL_ENERGY);
+    expect(s.player.energy).toBeGreaterThan(0);
+    expect(s.player.answers.every((a) => a.idleDrain > 0)).toBe(true);
     expect(summarize(s.player).score).toBe(0);
+  });
+});
+
+describe("v0.3.0：自然损耗、环境耦合与时间", () => {
+  it("每步固定 15 分钟，且自然损耗一定发生", () => {
+    const w = createWorld("idle1");
+    let s = pickTalent(createSession(w), w.talentChoices[0]);
+    while (!isDone(s)) s = step(s, PASS_INDEX);
+    expect(s.player.answers.at(-1)?.minutes).toBe(w.rounds * STEP_MINUTES);
+    const perStep = new Set(s.player.answers.map((a) => a.idleDrain));
+    expect(perStep.size).toBe(1);
+    expect([...perStep][0]).toBe(idleDrain(w.env));
+  });
+
+  it("炎热与严寒都比阴凉掉得快", () => {
+    const base = createWorld("temp", "A").env;
+    const cool = idleDrain({ ...base, temp: "cool", network: "local" });
+    const hot = idleDrain({ ...base, temp: "hot", network: "local" });
+    const freezing = idleDrain({ ...base, temp: "freezing", network: "local" });
+    expect(hot).toBeGreaterThan(cool);
+    expect(freezing).toBeGreaterThan(cool);
+  });
+
+  it("同一个动作在炎热里更贵", () => {
+    const w = createWorld("costly", "A");
+    const q = QUESTION_BY_ID[w.questions[0]];
+    const opt = q.options.find((o) => o.cost > 0);
+    if (!opt) return;
+    const cool = costOf(opt, { ...w.env, temp: "cool" }, null);
+    const hot = costOf(opt, { ...w.env, temp: "hot" }, null);
+    expect(hot).toBeGreaterThan(cool);
+  });
+
+  it("电量见底后，不耗电的选项仍然选得动", () => {
+    const w = createWorld("dead-battery");
+    const flat = { ...initialActor(w.talentChoices[0]), energy: 0 };
+    for (const id of w.questions) {
+      const q = QUESTION_BY_ID[id];
+      expect(hasAffordable(w, flat, q), `${id} 在没电时无路可走`).toBe(true);
+      const free = visibleIndexes(w, q).filter(
+        (i) => preview(w, flat, q, i).cost === 0,
+      );
+      expect(free.length, `${id} 没有不耗电的选项`).toBeGreaterThan(0);
+      for (const i of free) expect(preview(w, flat, q, i).affordable).toBe(true);
+    }
+  });
+});
+
+describe("v0.3.0：权重档位与存活概率", () => {
+  it("档位权重是三档，且确实 3 : 2 : 1", () => {
+    expect(TIER_WEIGHT.critical).toBe(3);
+    expect(TIER_WEIGHT.important).toBe(2);
+    expect(TIER_WEIGHT.minor).toBe(1);
+  });
+
+  it("每一步都记下了档位与时间", () => {
+    const w = createWorld("tier");
+    const s = playStraight(w, () => 1);
+    for (const a of s.player.answers) {
+      expect(["critical", "important", "minor"]).toContain(a.tier);
+      expect(a.minutes).toBeGreaterThan(0);
+    }
+  });
+
+  it("存活概率是三段相乘，落在 0~1 之间", () => {
+    for (let i = 0; i < 20; i++) {
+      const w = createWorld("sv" + i);
+      const s = playStraight(w, (n) => n % 2);
+      const b = survivalOf(s.player, w.env);
+      expect(b.p).toBeGreaterThanOrEqual(0);
+      expect(b.p).toBeLessThanOrEqual(1);
+      expect(b.found).toBeGreaterThanOrEqual(SURVIVAL.foundBase);
+      expect(b.rescue).toBeGreaterThanOrEqual(SURVIVAL.rescueBase);
+      expect(b.endure).toBeGreaterThanOrEqual(0.03);
+      expect(b.p).toBeCloseTo(b.found * b.rescue * b.endure, 10);
+    }
+  });
+
+  it("什么都不做的存活概率明显低于认真打", () => {
+    const playIdle = (w: World) => {
+      let s = pickTalent(createSession(w), w.talentChoices[0]);
+      while (!isDone(s)) s = step(s, PASS_INDEX);
+      return s.player;
+    };
+    let worse = 0;
+    for (let i = 0; i < 12; i++) {
+      const w = createWorld("cmp" + i);
+      const idleRun = playIdle(w);
+      const busy = playStraight(w, () => 1).player;
+      if (survivalOf(idleRun, w.env).p < survivalOf(busy, w.env).p) worse++;
+    }
+    expect(worse).toBeGreaterThanOrEqual(10);
+  });
+
+  it("事后最优参考线不低于任何一条实测路线", () => {
+    for (const seed of ["or1", "or2", "or3"]) {
+      const w = createWorld(seed);
+      const o = oracleFor(w);
+      const best = survivalOf(
+        playStraight(w, (n) => n % 3, o.talent ?? w.talentChoices[0]).player,
+        w.env,
+      ).p;
+      expect(o.survival.length).toBe(w.rounds + 1);
+      expect(o.survival.at(-1)!).toBeGreaterThanOrEqual(best - 1e-9);
+    }
   });
 });

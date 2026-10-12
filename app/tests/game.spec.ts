@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
-/** 一直点第一个买得起的选项，直到本局结束。 */
-async function answerAll(page: Page, rounds = 10) {
+/** 一直点第一个买得起的选项，直到本局结束。题数 8~12，给足余量。 */
+async function answerAll(page: Page, rounds = 12) {
   for (let i = 0; i < rounds; i++) {
     const alive = await page.getByTestId("player-score").count();
     if (alive) return;
@@ -25,7 +25,7 @@ async function startRun(page: Page, preset: "A" | "B") {
   await expect(page.locator(".event-panel")).toBeVisible();
 }
 
-test("完整一局：看清世界 → 选天赋 → 答完十题 → 结算 → 导出", async ({
+test("完整一局：看清处境 → 选天赋 → 答完 → 结算 → 导出", async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -51,8 +51,9 @@ test("完整一局：看清世界 → 选天赋 → 答完十题 → 结算 → 
   await page.getByRole("button", { name: "导出本局记录" }).click();
   expect((await download).suggestedFilename()).toMatch(/\.json$/);
 
-  // 逐题对照：十道题，两条路都摊开
-  await expect(page.locator(".replay-table tbody tr")).toHaveCount(10);
+  // 逐题对照：案例 A 固定 9 步，两条路都摊开
+  await page.locator(".replay-panel summary").click();
+  await expect(page.locator(".replay-table tbody tr")).toHaveCount(9);
 
   // 同一局再试：同一个种子，重新开始
   await page.getByRole("button", { name: "同一局再试" }).click();
@@ -69,13 +70,15 @@ test("打字机只是显示方式：不推进进度，也不掉电", async ({ pa
   if (await skip.isVisible()) await skip.click();
   else await story.click();
   await expect(page.getByTestId("battery")).toContainText("1.000%");
-  await expect(page.getByText(/第 1 \/ 10 题/)).toBeVisible();
+  await expect(page.getByText(/第 1 步/)).toBeVisible();
+  // 题干里不该再出现 E34 这类内部编号
+  await expect(page.locator(".event-title")).toHaveCount(0);
 });
 
 test("键盘 1–9 可以直接选择", async ({ page }) => {
   await startRun(page, "A");
   await page.keyboard.press("1");
-  await expect(page.getByText(/第 2 \/ 10 题/)).toBeVisible();
+  await expect(page.getByText(/第 2 步/)).toBeVisible();
 });
 
 test("每一题都给出标价，且明确写出做完会剩多少", async ({ page }) => {
@@ -83,6 +86,44 @@ test("每一题都给出标价，且明确写出做完会剩多少", async ({ pa
   const costs = page.locator(".choice-cost b");
   expect(await costs.count()).toBeGreaterThanOrEqual(3);
   await expect(page.locator(".choice-cost small").first()).toContainText("做完剩");
+});
+
+test("开局先把处境讲清楚，玩家才看得懂题", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /案例 A/ }).click();
+  const card = page.locator(".backdrop-card");
+  await expect(card).toBeVisible();
+  const skip = page.getByRole("button", { name: /跳过这段/ });
+  if (await skip.isVisible()) await skip.click();
+  await expect(card).toContainText("还剩 1.000%");
+  await expect(card).toContainText("15 分钟");
+});
+
+test("中途可以放弃这一局，再重开一局", async ({ page }) => {
+  await startRun(page, "A");
+  await page.getByTestId("abandon").click();
+  await page.getByRole("button", { name: "确定放弃并重开" }).click();
+  await expect(
+    page.getByRole("button", { name: /开始一段人生/ }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("one-percent-session-v1"),
+    ),
+  ).toBeNull();
+});
+
+test("结算页给出存活概率、曲线与权重公式，并停在顶部", async ({ page }) => {
+  await startRun(page, "A");
+  await answerAll(page);
+  await expect(page.getByTestId("player-score")).toContainText("%");
+  await expect(page.getByTestId("ghost-score")).toContainText("%");
+  await expect(page.locator(".survival-chart")).toBeVisible();
+  await expect(page.locator(".chart-legend")).toContainText("事后最优");
+  await expect(page.getByText("权重档位")).toBeVisible();
+  await expect(page.getByText(/存活概率与权重的完整算法/)).toBeVisible();
+  // 结果在最上面，不能让人停在最下面
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
 
 test("存储不可用时仍可玩完整一局", async ({ page }) => {

@@ -1,7 +1,7 @@
 import { QUESTIONS } from "../game/content/questions";
 import { TALENTS } from "../game/content/talents";
 import { PERSONAS } from "../game/content/personas";
-import { ROUNDS } from "../game/config";
+import { MAX_ROUNDS, MIN_ROUNDS } from "../game/config";
 import type { Profile } from "../game/types";
 
 interface Props {
@@ -38,7 +38,7 @@ export default function StartScreen({
             屏幕上写着：1%。
           </p>
           <p className="muted hero-description">
-            十道题，每道题都在烧这一格电。
+            每一步都会烧这一格电，每一步固定推进 15 分钟——不操作，电池也在掉。
             <br />
             同一个世界里，还有一个和你抽到同一批题的 Ghost——它按性格花钱，不做最优解。
           </p>
@@ -54,8 +54,8 @@ export default function StartScreen({
           </div>
           <div className="hero-facts">
             <span>◷ 3–5 分钟</span>
-            <span>◇ 每局 {ROUNDS} 道题</span>
-            <span>◈ 题库 {QUESTIONS.length} 道</span>
+            <span>◇ 每局 {MIN_ROUNDS}–{MAX_ROUNDS} 步</span>
+            <span>◈ 题库 {QUESTIONS.length} 道 · 每次随机抽</span>
           </div>
         </div>
         <div

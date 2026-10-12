@@ -1,4 +1,4 @@
-import { RULE_VERSION, STAGE_QUOTA } from "./config";
+import { MAX_ROUNDS, MIN_ROUNDS, RULE_VERSION } from "./config";
 import { TALENTS } from "./content/talents";
 import { PERSONAS } from "./content/personas";
 import { QUESTIONS } from "./content/questions";
@@ -8,7 +8,7 @@ import type { Env, World } from "./types";
 const DISASTERS = ["earthquake", "flood", "fire", "mudslide", "typhoon", "avalanche"] as const;
 const NETWORKS = ["flicker", "weak", "dead", "local"] as const;
 const INJURIES = ["none", "scratch", "fracture", "bleeding"] as const;
-const TEMPS = ["freezing", "cool", "sultry"] as const;
+const TEMPS = ["freezing", "cool", "sultry", "hot"] as const;
 const DAYLIGHTS = ["day", "dusk", "night"] as const;
 const CARRIES = ["none", "pen", "torch", "powerbank"] as const;
 
@@ -32,24 +32,36 @@ const PRESET_ENV: Record<"A" | "B", Env> = {
   },
 };
 
-function drawQuestions(seed: string): string[] {
+/** 固定案例的题数也固定，演示才对得上。 */
+const PRESET_ROUNDS: Record<"A" | "B", number> = { A: 9, B: 11 };
+
+/** 按阶段分配题数：早、晚各约三成，剩下的给中期。 */
+function quota(rounds: number): Record<"early" | "mid" | "late", number> {
+  const early = Math.max(2, Math.round(rounds * 0.3));
+  const late = Math.max(2, Math.round(rounds * 0.3));
+  return { early, late, mid: Math.max(2, rounds - early - late) };
+}
+
+function drawQuestions(seed: string, rounds: number): string[] {
   const ids: string[] = [];
+  const q = quota(rounds);
   for (const stage of ["early", "mid", "late"] as const) {
-    const pool = QUESTIONS.filter((q) => q.stage === stage).map((q) => q.id);
-    const take = Math.min(STAGE_QUOTA[stage], pool.length);
+    const pool = QUESTIONS.filter((x) => x.stage === stage).map((x) => x.id);
+    const take = Math.min(q[stage], pool.length);
     ids.push(...shuffle(seed, `q-${stage}`, pool).slice(0, take));
   }
   return ids;
 }
 
 /** 固定案例也按阶段配额取题，这样演示与随机局的结构一致。 */
-function presetQuestions(): string[] {
+function presetQuestions(rounds: number): string[] {
   const ids: string[] = [];
+  const q = quota(rounds);
   for (const stage of ["early", "mid", "late"] as const)
     ids.push(
-      ...QUESTIONS.filter((q) => q.stage === stage)
-        .slice(0, STAGE_QUOTA[stage])
-        .map((q) => q.id),
+      ...QUESTIONS.filter((x) => x.stage === stage)
+        .slice(0, q[stage])
+        .map((x) => x.id),
     );
   return ids;
 }
@@ -67,6 +79,9 @@ export function createWorld(seed: string, preset?: "A" | "B"): World {
         carry: pick(seed, "carry", CARRIES),
       };
   const talentIds = TALENTS.map((t) => t.id);
+  const rounds = preset
+    ? PRESET_ROUNDS[preset]
+    : MIN_ROUNDS + Math.floor(hash01(seed, "rounds") * (MAX_ROUNDS - MIN_ROUNDS + 1));
   return {
     seed,
     preset,
@@ -75,9 +90,22 @@ export function createWorld(seed: string, preset?: "A" | "B"): World {
     ghostPersona: pick(seed, "persona", PERSONAS.map((p) => p.id)),
     ghostTalent: pick(seed, "gtalent", talentIds),
     // 固定案例的题目顺序也固定，演示与测试才复现得了。
-    questions: preset ? presetQuestions() : drawQuestions(seed),
+    questions: preset ? presetQuestions(rounds) : drawQuestions(seed, rounds),
+    rounds,
     version: RULE_VERSION,
   };
+}
+
+/** 0~1 之间的确定性小数，用来抽题数。 */
+function hash01(seed: string, stream: string): number {
+  let h = 2166136261;
+  const s = `${seed}|${stream}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 15;
+  return ((h >>> 0) % 10000) / 10000;
 }
 
 export function envSummary(env: Env): string[] {
@@ -85,7 +113,7 @@ export function envSummary(env: Env): string[] {
     disaster: { earthquake: "地震", flood: "洪水", fire: "火灾", mudslide: "泥石流", typhoon: "台风", avalanche: "雪崩" },
     network: { flicker: "时断时续", weak: "微弱", dead: "完全中断", local: "局部可用" },
     injury: { none: "暂无伤势", scratch: "擦伤", fracture: "疑似骨折", bleeding: "持续失血" },
-    temp: { freezing: "严寒", cool: "阴凉", sultry: "闷热" },
+    temp: { freezing: "严寒", cool: "阴凉", sultry: "闷热", hot: "炎热" },
     daylight: { day: "白天", dusk: "黄昏", night: "深夜" },
     carry: { none: "两手空空", pen: "有纸笔", torch: "有手电", powerbank: "有残电充电宝" },
   } as Record<string, Record<string, string>>;

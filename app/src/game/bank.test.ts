@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OUTCOME_THRESHOLD, STAGE_QUOTA } from "./config";
+import { MAX_ROUNDS, OUTCOME_THRESHOLD } from "./config";
 import { QUESTIONS, questionsByStage } from "./content/questions";
 import { TALENTS } from "./content/talents";
 import type { Env, OutcomeId, Tag } from "./types";
@@ -24,7 +24,7 @@ const ENV_VALUES = {
   disaster: ["earthquake", "flood", "fire", "mudslide", "typhoon", "avalanche"],
   network: ["flicker", "weak", "dead", "local"],
   injury: ["none", "scratch", "fracture", "bleeding"],
-  temp: ["freezing", "cool", "sultry"],
+  temp: ["freezing", "cool", "sultry", "hot"],
   daylight: ["day", "dusk", "night"],
   carry: ["none", "pen", "torch", "powerbank"],
 } as const satisfies Record<keyof Env, readonly string[]>;
@@ -34,8 +34,9 @@ const OUTCOMES = Object.keys(OUTCOME_THRESHOLD) as OutcomeId[];
 describe("题库体检", () => {
   it("规模足够大，两局很难撞题", () => {
     expect(QUESTIONS.length).toBeGreaterThanOrEqual(120);
+    // 一局最多 12 题、三阶段各占约三成，每个阶段至少要撑得起 12 题的抽题
     for (const s of STAGES)
-      expect(questionsByStage(s).length).toBeGreaterThanOrEqual(STAGE_QUOTA[s] * 8);
+      expect(questionsByStage(s).length).toBeGreaterThanOrEqual(MAX_ROUNDS * 2);
   });
 
   it("编号不重复", () => {
