@@ -10,3 +10,5 @@ memory/
 新建 文本文档.txt
 app/test-results/
 app/playwright-report/
+*.tsbuildinfo
+app/.cache/
