@@ -70,6 +70,16 @@
 - 用户反馈的处理原则：**先判断根因，再动手**。他提「选项太少」时，真问题是题库规模与情境差异，
   不是按钮数量——只按字面改会被指出「只是把选项做多了」。改完要用数据证明问题消失（如满值局数 0）。
 
+- 用户于2026-10-12要求：v0.2.0 保持原链接不动，**v0.3.0 新建一条独立链接**，以便并排对比与演示差异。
+  当前线上：v0.3.0 → `https://one-percent-battery-v3.app.workbuddy.host/`；
+  v0.2.0 → `https://one-percent-battery.app.workbuddy.host/`。
+- 仓库分支约定：`main` 锁在 v0.1.0 未动，每个版本一条分支（`v0.2.0` / `v0.3.0`）。
+  **不要直接 `git checkout main`**，会切回 v0.1.0 老版本。
+- 部署踩坑（已修，别回退）：Vite 必须给 `server`/`preview` 都加 `host: "0.0.0.0"` 与 `allowedHosts: true`，
+  端口读 `process.env.PORT`，否则反代域名下打不开。`vite.config.ts` 用 `process` 会报 TS2591，
+  项目未装 `@types/node`，用文件顶部 `declare const process` 解决。
+- **提交前别用 `git add -A`**：会把调试用的临时脚本一起提交进去（本轮误提交过一次，已删除并补提交）。
+
 ## 7. 项目概述
 
 - 当前选题：1% Battery。用户于 2026-10-11 明确决定从 The Invisible Distance 换到此题。
