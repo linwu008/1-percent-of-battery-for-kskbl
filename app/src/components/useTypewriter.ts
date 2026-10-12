@@ -20,8 +20,11 @@ export function useTypewriter(text: string, speed = 26, instant = false) {
   }, []);
 
   useEffect(() => {
-    setFrame({ text, count: 0 });
-  }, [text]);
+    setFrame((previous) => ({
+      text,
+      count: instant || reduced ? text.length : previous.text === text ? previous.count : 0,
+    }));
+  }, [text, instant, reduced]);
 
   useEffect(() => {
     if (complete) return;

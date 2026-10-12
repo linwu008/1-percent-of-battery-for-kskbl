@@ -19,7 +19,7 @@ export default function DecisionControls({ view, onView, label, canConfirm, typi
         ))}
       </div>
       <button className="confirm-action" data-testid="confirm-action" disabled={!canConfirm}
-        onClick={onConfirm} title={label ? `确认：${label}` : "请先选择一个行动"}>
+        onClick={(event) => { if (event.detail <= 1) onConfirm(); }} title={label ? `确认：${label}` : "请先选择一个行动"}>
         <span><small>{typing ? "先读完，再决定" : label ? "已选定 · 等待确认" : "尚未选择行动"}</small>
           <strong>{typing && label ? "显示完整剧情" : label ? `确认：${label}` : "选择后确认"}</strong></span>
         <span className="enter-key" aria-hidden="true">↵</span>

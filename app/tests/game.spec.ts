@@ -293,3 +293,57 @@ test("桌面选项可滚到无遮挡处，窄屏确认紧跟选项", async ({ pa
   const ghost = (await page.locator(".game-aside").boundingBox())!;
   expect(mobileDock.y + mobileDock.height).toBeLessThanOrEqual(ghost.y);
 });
+
+test("低高度桌面仍能读到完整选项，底栏不覆盖内容", async ({ page }) => {
+  await startRun(page, "A");
+  for (const width of [1024, 1280]) {
+    await page.setViewportSize({ width, height: 600 });
+    const choices = (await page.locator(".choices").boundingBox())!;
+    const option = (await page.getByTestId("option-0").boundingBox())!;
+    const dock = (await page.locator(".decision-dock").boundingBox())!;
+    expect(choices.height).toBeGreaterThanOrEqual(option.height);
+    expect(choices.y + choices.height).toBeLessThanOrEqual(dock.y);
+    await page.getByTestId("option-0").click();
+    await expect(page.getByTestId("option-0")).toHaveAttribute("aria-pressed", "true");
+  }
+});
+
+test("审查回归：鼠标后数字切换，Enter确认的是新选择", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await startRun(page, "A");
+  await page.getByTestId("option-0").click();
+  await page.keyboard.press("2");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("step-label")).toContainText("第 2 步");
+  await expect(page.locator(".last-action")).toContainText("凭记忆判断方位");
+});
+
+test("审查回归：双击跳字不执行，之后单独确认只执行一次", async ({ page }) => {
+  await startRun(page, "A");
+  await page.keyboard.press("1");
+  await expect(page.locator(".event-story")).toHaveClass(/typing/);
+  await page.getByTestId("confirm-action").dblclick();
+  await expect(page.getByTestId("step-label")).toContainText("第 1 步");
+  await expect(page.getByTestId("battery")).toContainText("1.000%");
+  await page.getByTestId("confirm-action").click();
+  await expect(page.getByTestId("step-label")).toContainText("第 2 步");
+});
+
+test("审查回归：切回逐字不抹去已经读过的正文", async ({ page }) => {
+  await startRun(page, "A");
+  await page.getByRole("button", { name:"立即显示剧情" }).click();
+  const full = await page.locator(".event-story").innerText();
+  await page.getByRole("button", { name:"恢复逐字剧情" }).click();
+  expect(await page.locator(".event-story").getAttribute("class")).not.toMatch(/typing/);
+  expect(await page.locator(".event-story").innerText()).toBe(full);
+});
+
+test("行动记录的余量包含自然损耗，与当时状态栏一致", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await startRun(page, "A");
+  await page.getByTestId("option-0").click();
+  await page.getByTestId("confirm-action").click();
+  await expect(page.getByTestId("battery")).toContainText("0.752%");
+  await page.getByRole("button", { name: "行动记录", exact:true }).click();
+  await expect(page.locator(".log-list")).toContainText("行动后余量 0.752%");
+});

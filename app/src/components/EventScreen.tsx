@@ -41,6 +41,10 @@ export default function EventScreen({
   const stuck = q ? !hasAffordable(w, s.player, q) : false;
   const chosen = options.find((o) => o.index === selected);
   const label = selected === -1 && stuck ? "合上手机，等待结果" : chosen?.option.label;
+  const select = (index: number) => {
+    setSelected(index);
+    main.current?.focus({ preventScroll: true });
+  };
 
   // 每步由父组件使用 key 重建，选择与提交锁不跨步骤继承。
   useEffect(() => { main.current?.focus({ preventScroll: true }); }, []);
@@ -72,7 +76,7 @@ export default function EventScreen({
       const n = Number(e.key);
       if (/^[1-9]$/.test(e.key)) {
         const picked = options[n - 1];
-        if (picked?.p.affordable) { e.preventDefault(); setSelected(picked.index); }
+        if (picked?.p.affordable) { e.preventDefault(); select(picked.index); }
         return;
       }
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -146,7 +150,7 @@ export default function EventScreen({
             {options.map(({ index, option, p }, i) => (
               <button key={index} className={`choice ${selected === index ? "selected" : ""}`}
                 disabled={!p.affordable} aria-pressed={selected === index} data-testid={`option-${i}`}
-                onClick={() => setSelected(index)}>
+                onClick={() => select(index)}>
                 <span className="choice-index">{String(i + 1).padStart(2, "0")}</span>
                 <span className="choice-body">
                   <strong>{option.label}</strong><small>{option.detail}</small>
@@ -162,7 +166,7 @@ export default function EventScreen({
               </button>
             ))}
             {stuck && <button className={`choice drain-choice ${selected === -1 ? "selected" : ""}`}
-              aria-pressed={selected === -1} onClick={() => setSelected(-1)}>
+              aria-pressed={selected === -1} onClick={() => select(-1)}>
               <span className="choice-index">!!</span><span className="choice-body"><strong>攥着手机，什么都做不了了</strong>
                 <small>剩余电量无法完成任何行动。合上手机，等待本局结果。</small></span>
             </button>}
@@ -185,7 +189,7 @@ export default function EventScreen({
               <ol className="log-list">{s.player.answers.map((l, i) => <li key={i}>
                 <span className="log-idx">{String(i + 1).padStart(2, "0")}</span><div>
                   <strong>{l.label}</strong><span className="log-cost"> −{money(l.cost)}</span><p>{l.note}</p>
-                  <small>自然损耗 {money(l.idleDrain)} · 行动后余量 {money(l.energyAfter)} · {l.minutes} 分钟</small>
+                  <small>自然损耗 {money(l.idleDrain)} · 行动后余量 {money(Math.max(0, l.energyAfter - l.idleDrain))} · {l.minutes} 分钟</small>
                 </div></li>)}</ol>}
           </section>}
         </section>
