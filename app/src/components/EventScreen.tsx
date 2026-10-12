@@ -1,218 +1,293 @@
-import { choices, visibleContext } from "../game/engine";
+import { useEffect, useState } from "react";
+import { QUESTION_BY_ID } from "../game/content/questions";
+import { PERSONA_BY_ID } from "../game/content/personas";
+import { TALENT_BY_ID } from "../game/content/talents";
+import { OUTCOME_LABELS, OUTCOME_WEIGHTS, ROUNDS } from "../game/config";
+import { hasAffordable, preview, visibleIndexes } from "../game/engine";
+import { pick } from "../game/rng";
 import { summarize } from "../game/scoring";
-import type { Action, Session, LogEntry } from "../game/types";
-export function actionName(l: LogEntry): string {
-  const a = l.action;
-  return a.kind === "send"
-    ? "发送信息"
-    : a.kind === "light"
-      ? `${a.duration}秒光信号`
-      : a.kind === "brief"
-        ? a.method === "paper"
-          ? "纸笔传阅"
-          : "亮屏展示"
-        : "等待";
+import { envSummary } from "../game/world";
+import type { OutcomeId, Session } from "../game/types";
+
+/**
+ * 逐字显示正文。打字只影响显示，不推进进度、不消耗电量。
+ * 尊重系统的「减少动效」设置，并允许随时点击跳过。
+ */
+function useTypewriter(text: string, speed = 26) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    setCount(0);
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setCount(text.length);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setCount((c) => {
+        if (c >= text.length) {
+          window.clearInterval(id);
+          return c;
+        }
+        return c + 1;
+      });
+    }, speed);
+    return () => window.clearInterval(id);
+  }, [text, speed]);
+
+  const skip = () => setCount(text.length);
+  return { shown: text.slice(0, count), done: count >= text.length, skip };
 }
-export function LogList({ logs }: { logs: LogEntry[] }) {
-  return (
-    <ol className="log-list">
-      {logs.map((l) => (
-        <li key={l.id}>
-          <time>
-            {l.start}–{l.end}s
-          </time>
-          <div>
-            <strong>{actionName(l)}</strong>
-            <span className="log-cost">−{(l.cost / 10).toFixed(1)} 电</span>
-            <p>{l.gained.length ? l.gained.join("、") : l.note}</p>
-            <small>
-              {l.context}。{l.interrupted ? " 本次行动未完整完成。" : ""}
-            </small>
-          </div>
-        </li>
-      ))}
-    </ol>
-  );
-}
+
+const money = (n: number) => `${(n / 1000).toFixed(3)}%`;
+
 export default function EventScreen({
   session: s,
   onChoose,
+  onDrain,
 }: {
   session: Session;
-  onChoose: (a: Action) => void;
+  onChoose: (index: number) => void;
+  onDrain: () => void;
 }) {
-  const a = s.player,
-    t = a.time;
-  const event = t < 60 ? 0 : t < 100 ? 1 : t < 110 ? 2 : 3;
-  const titles = [
-    "先报位置，还是等齐信息？",
-    "让那边的人，看见这里。",
-    "把安排，传到每个人手里。",
-    "还有一次，把话说清的机会。",
-  ];
-  const text =
-    t < 60
-      ? t < 20
-        ? "你已经确认所在的位置。同行者还在清点人数，预计第20秒会告诉你结果。先把位置发出去，还是等齐后一起发送？"
-        : "人数已经确认。你可以发送尚未送达的内容，也可以留下电量，面对稍后的机会。"
-      : t < 100
-        ? t < 80
-          ? "远处的联络人员正在观察这片区域。你可以用手机灯光发出信号，持续多久，由你决定。"
-          : "对方已经移开视线。刚才发出的信号是否足够，会影响他们对这片区域的了解。"
-        : t < 110
-          ? "本区联络安排已经到达。同行者需要知道稍后的安排；抄写不用电，展示屏幕则更快。"
-          : a.firstContact
-            ? "你先前发出的位置建立了联系。对方发来确认请求，等待你回应。"
-            : "初次通信没有建立联系。现在还可以补发位置，但本局不会再有一轮确认。";
+  const w = s.world;
+  const qid = w.questions[s.step];
+  const q = QUESTION_BY_ID[qid];
+  const persona = PERSONA_BY_ID[s.ghostPersona];
+  const text = q ? pick(w.seed, `prompt:${q.id}`, q.prompt) : "";
+  const typed = useTypewriter(text);
+  const me = summarize(s.player);
   const ghost = summarize(s.ghost);
-  const last = a.logs.at(-1);
+  const last = s.player.answers.at(-1);
+
+  const options = q
+    ? visibleIndexes(w, q).map((i) => ({ index: i, option: q.options[i], p: preview(w, s.player, q, i) }))
+    : [];
+  const stuck = q ? !hasAffordable(w, s.player, q) : false;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const n = Number(e.key);
+      if (!Number.isInteger(n) || n < 1 || n > 9) return;
+      const picked = options[n - 1];
+      if (!picked || !picked.p.affordable) return;
+      e.preventDefault();
+      onChoose(picked.index);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [options, onChoose]);
+
+  if (!q) return null;
+
   return (
     <main className="game-screen">
       <div className="game-heading">
         <span className="eyebrow">
-          {s.practice
-            ? "同局练习 · 不计入成长"
-            : s.world.preset
-              ? `固定案例 ${s.world.preset}`
-              : "新的随机人生"}{" "}
-          <span className="seed">#{s.world.seed}</span>
+          {s.world.preset ? `固定案例 ${s.world.preset}` : "随机人生"}{" "}
+          <span className="seed">#{w.seed}</span>
         </span>
-        <span className="pause-note">Ⅱ 阅读和思考时，时间暂停</span>
+        <span className="pause-note">
+          第 {s.step + 1} / {Math.min(ROUNDS, w.questions.length)} 题 ·
+          思考和阅读不耗电
+        </span>
       </div>
+
       <div className="resource-bar">
         <div>
           <span className="stat-label">最后 1% 的余量</span>
-          <strong>
-            {(a.energy / 10).toFixed(1)}
-            <small> / 10</small>
+          <strong data-testid="battery">
+            {money(s.player.energy)}
+            <small> / 1.000%</small>
           </strong>
           <div className="energy-track">
-            <i style={{ width: `${a.energy}%` }} />
+            <i style={{ width: `${(s.player.energy / 1000) * 100}%` }} />
           </div>
         </div>
-        <div data-testid="game-time" data-time={t}>
-          <span className="stat-label">游戏时间</span>
-          <strong>
-            {String(Math.floor(t / 60)).padStart(2, "0")}
-            <span className="time-colon">:</span>
-            {String(t % 60).padStart(2, "0")}
+        <div>
+          <span className="stat-label">已形成的成果</span>
+          <strong data-testid="value">
+            {me.value}
+            <small> / 12</small>
           </strong>
-          <small>由行动推进</small>
+          <div className="outcome-dots">
+            {(Object.keys(OUTCOME_WEIGHTS) as OutcomeId[]).map((k) => (
+              <i
+                key={k}
+                className={s.player.delivered[k] ? "on" : ""}
+                title={OUTCOME_LABELS[k]}
+              />
+            ))}
+          </div>
         </div>
         <div>
-          <span className="stat-label">已经发挥作用</span>
-          <strong>
-            {summarize(a).value}
-            <small> 成果价值</small>
+          <span className="stat-label">你的天赋</span>
+          <strong className="talent-inline">
+            {s.player.talent ? (TALENT_BY_ID[s.player.talent]?.name ?? "—") : "—"}
           </strong>
-          <small>成果优先，耗电其次</small>
+          <small>已生效</small>
         </div>
       </div>
+
+      <div className="env-strip">
+        {envSummary(w.env).map((line) => {
+          const [k, v] = line.split(" ");
+          return (
+            <span key={k} className="env-chip">
+              <small>{k}</small>
+              <b>{v}</b>
+            </span>
+          );
+        })}
+      </div>
+
       <div className="game-columns">
         <section className="event-panel panel">
           <div className="chapter-row">
-            <span>CHAPTER 0{event + 1}</span>
+            <span>
+              {q.stage === "early" ? "Ⅰ 处境" : q.stage === "mid" ? "Ⅱ 送出" : "Ⅲ 余量"}
+            </span>
             <div className="chapter-dots">
-              {[0, 1, 2, 3].map((n) => (
-                <i key={n} className={n <= event ? "active" : ""} />
+              {w.questions.map((_, n) => (
+                <i key={n} className={n <= s.step ? "active" : ""} />
               ))}
             </div>
           </div>
-          <h1>{titles[event]}</h1>
-          <p className="event-story">{text}</p>
-          <div className="condition">
-            <span>◉</span>
-            <div>
-              <small>当前可知条件</small>
-              <strong>{visibleContext(s.world, a)}</strong>
-            </div>
-          </div>
-          {a.energy === 0 && (
-            <p className="empty-note">
-              手机已经关机。你仍可以等待、传递已有信息，完成这段经历。
-            </p>
+          <h1 className="event-title">{q.id.toUpperCase()}</h1>
+          <p
+            className={"event-story" + (typed.done ? "" : " typing")}
+            onClick={typed.skip}
+          >
+            {typed.shown}
+            {!typed.done && <span className="caret" aria-hidden="true" />}
+          </p>
+          {!typed.done && (
+            <button className="skip-type" onClick={typed.skip}>
+              跳过这段 ▸
+            </button>
           )}
+
           <div className="choices">
             <div className="choice-heading">
-              你的选择 <span>成本均为模拟值</span>
+              你的选择 <span>标价是名义耗电 · 实际收益受环境影响 · 可按 1–{options.length} 键</span>
             </div>
-            {choices(s.world, a).map((c, i) => (
+            {options.map(({ index, option, p }, i) => (
               <button
-                key={JSON.stringify(c.action)}
-                className={`choice ${c.action.kind === "wait" ? "wait-choice" : ""}`}
-                disabled={!!c.disabled}
-                onClick={(e) => {
-                  if (e.detail < 2) onChoose(c.action);
-                }}
+                key={index}
+                className={`choice ${option.tags.includes("wait") ? "wait-choice" : ""}`}
+                disabled={!p.affordable}
+                data-testid={`option-${i}`}
+                onClick={() => onChoose(index)}
               >
                 <span className="choice-index">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="choice-body">
-                  <strong>{c.title}</strong>
-                  <small>{c.disabled || c.detail}</small>
+                  <strong>{option.label}</strong>
+                  <small>{option.detail}</small>
+                  <span className="choice-tags">
+                    {option.gain && (
+                      <em className="tag-gain">
+                        {OUTCOME_LABELS[option.gain.outcome]} +{option.gain.points}
+                      </em>
+                    )}
+                    {option.gamble && (
+                      <em className="tag-risk">
+                        {OUTCOME_LABELS[option.gamble.outcome]} +{option.gamble.points}（
+                        {Math.round(option.gamble.odds * 100)}% 把握）
+                      </em>
+                    )}
+                    {!option.gain && !option.gamble && <em className="tag-none">没有确定收益</em>}
+                  </span>
                 </span>
                 <span className="choice-cost">
-                  <b>{c.cost ? `−${c.cost / 10} 电` : "不耗电"}</b>
-                  <small>{c.duration} 秒</small>
+                  <b>{p.cost ? `−${money(p.cost)}` : "不耗电"}</b>
+                  <small>
+                    {p.affordable ? `做完剩 ${money(s.player.energy - p.cost)}` : "电量不够"}
+                  </small>
                 </span>
                 <span className="choice-arrow">↗</span>
               </button>
             ))}
+            {stuck && (
+              <button className="choice drain-choice" onClick={onDrain}>
+                <span className="choice-index">!!</span>
+                <span className="choice-body">
+                  <strong>攥着手机，什么都做不了了</strong>
+                  <small>剩下这点电，任何一项都撑不起来。合上手机，等最后的结果。</small>
+                </span>
+                <span className="choice-arrow">↗</span>
+              </button>
+            )}
           </div>
         </section>
+
         <aside className="game-aside">
           <div className="ghost-card panel">
             <div className="panel-kicker">
-              <span className="ghost-dot" /> YOUR GHOST{" "}
-              <span>V{s.ghostVersion}</span>
+              <span className="ghost-dot" /> YOUR GHOST
             </div>
             <h2>
-              同一时刻，
+              同一批题，
               <br />
-              另一个选择。
+              另一种花法。
             </h2>
-            <p>
-              它正在经历相同的环境。
-              <br />
-              下一步，它也并不知道。
-            </p>
+            <p className="ghost-persona">{persona?.note}</p>
             <div className="ghost-stats">
               <div>
-                <small>剩余能量</small>
-                <strong>{ghost.remaining.toFixed(1)}</strong>
+                <small>剩余</small>
+                <strong>{money(s.ghost.energy)}</strong>
               </div>
               <div>
-                <small>成果价值</small>
+                <small>成果</small>
                 <strong>{ghost.value}</strong>
               </div>
             </div>
             <div className="ghost-meter">
-              <i style={{ width: `${s.ghost.energy}%` }} />
+              <i style={{ width: `${(s.ghost.energy / 1000) * 100}%` }} />
             </div>
             <small className="ghost-foot">
-              已同步至 {t} 秒 · 完整路线在结算后展开
+              已同步 {s.ghost.answers.length} 题 · 它这一题的选择你还看不到
             </small>
           </div>
+
           {last && (
             <div className="last-action panel" aria-live="polite">
-              <span className="eyebrow">刚才的选择</span>
+              <span className="eyebrow">上一题的结果</span>
               <h3>
-                {actionName(last)} <span>−{last.cost / 10} 电</span>
+                {last.label} <span>−{money(last.cost)}</span>
               </h3>
-              <p>{last.gained.join("、") || last.note}</p>
-              <small>
-                {last.interrupted
-                  ? "只计算已发生的消耗，已完成成果保留。"
-                  : `推进了 ${last.end - last.start} 秒，后续机会随时间变化。`}
-              </small>
+              <p>{last.note}</p>
             </div>
           )}
+
           <details className="journal">
             <summary>
-              查看自己的行动记录 <span>{a.logs.length}</span>
+              查看自己的全部选择 <span>{s.player.answers.length}</span>
             </summary>
-            <LogList logs={a.logs} />
+            <ol className="log-list">
+              {s.player.answers.map((l, i) => (
+                <li key={i}>
+                  <span className="log-idx">{String(i + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{l.label}</strong>{" "}
+                    <span className="log-cost">−{money(l.cost)}</span>
+                    <p>{l.note}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </details>
+
+          <details className="journal">
+            <summary>本局规则</summary>
+            <p className="muted">
+              电量 1.000%，十道题。每道题的标价是名义耗电，实际收益会被灾种、信号、伤势、
+              温度、时段、随身物改写。赌运对双方一致——你和 Ghost 在同一选项上抽到同一个
+              结果，所以差距只来自选择。
+            </p>
           </details>
         </aside>
       </div>

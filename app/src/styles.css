@@ -1396,3 +1396,499 @@ td:not(:first-child) {
     animation: none !important;
   }
 }
+
+/* 证据面板：电量流向图与打法对照 */
+.evidence {
+  padding: 27px;
+  margin: 22px 0;
+}
+.evidence h2 {
+  font-size: 21px;
+  line-height: 1.5;
+  margin: 13px 0 12px;
+}
+.evidence h3 {
+  font-size: 15px;
+  margin: 30px 0 10px;
+}
+.evidence .muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  margin-bottom: 4px;
+}
+.energy-chart {
+  width: 100%;
+  height: auto;
+  margin: 14px 0 6px;
+  overflow: visible;
+}
+.grid-line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.axis-label {
+  fill: var(--muted);
+  font-size: 9px;
+  text-anchor: middle;
+}
+.axis-y {
+  text-anchor: end;
+}
+.close-line {
+  stroke: var(--amber);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.65;
+}
+.close-label {
+  fill: var(--amber);
+  font-size: 9px;
+  opacity: 0.9;
+}
+.quake-line {
+  stroke: var(--purple);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+  opacity: 0.8;
+}
+.flow-player {
+  fill: none;
+  stroke: var(--mint);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.flow-ghost {
+  fill: none;
+  stroke: var(--purple);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  opacity: 0.85;
+  stroke-linejoin: round;
+}
+.mark-player {
+  fill: var(--mint);
+  stroke: var(--amber);
+  stroke-width: 1.5;
+}
+.mark-ghost {
+  fill: var(--purple);
+  stroke: var(--amber);
+  stroke-width: 1.5;
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+}
+.chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.swatch {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.swatch.player {
+  background: var(--mint);
+}
+.swatch.ghost {
+  background: var(--purple);
+}
+.swatch.close {
+  background: var(--amber);
+}
+.strategy-table {
+  margin-top: 12px;
+}
+.strategy-table td {
+  padding: 11px 12px;
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+}
+.strategy-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.strategy-table tbody tr:hover {
+  background: #182420;
+}
+.strategy-table tbody tr.selected {
+  background: #1b2a21;
+}
+.strategy-table tbody tr:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: -2px;
+}
+.strategy-table td strong {
+  display: block;
+  font-weight: 550;
+  margin-bottom: 3px;
+}
+.strategy-table td small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.6;
+  max-width: 260px;
+}
+.strategy-table .bar {
+  display: block;
+  height: 3px;
+  background: #223029;
+  border-radius: 2px;
+  margin-bottom: 5px;
+  overflow: hidden;
+}
+.strategy-table .bar i {
+  display: block;
+  height: 100%;
+  background: var(--muted);
+}
+.strategy-table .bar i.adaptive {
+  background: var(--mint);
+}
+.strategy-detail {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101913;
+}
+.detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+.flow-table table {
+  font-size: 12px;
+}
+.flow-table td,
+.flow-table th {
+  padding: 7px 10px;
+  border-top: 1px solid var(--line);
+}
+.flow-table tr.free td {
+  color: var(--muted);
+}
+.flow-table tfoot td {
+  border-top: 1px solid var(--line);
+  font-weight: 550;
+}
+.flag {
+  margin-left: 7px;
+  font-size: 10px;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 3px;
+  padding: 0 5px;
+}
+.findings {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.85;
+  color: #d3dbd5;
+}
+.findings li {
+  margin-bottom: 9px;
+}
+.findings strong {
+  color: var(--mint);
+  font-weight: 550;
+}
+.evidence-foot {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+/* 打字机效果 */
+.event-story {
+  min-height: 5.6em;
+  cursor: pointer;
+}
+.event-story.typing {
+  cursor: pointer;
+}
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--mint);
+  animation: caret-blink 0.9s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+.skip-type {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.skip-type:hover {
+  color: var(--mint);
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret {
+    animation: none;
+  }
+}
+@media (max-width: 900px) {
+  .evidence {
+    padding: 20px;
+  }
+  .strategy-table,
+  .flow-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .strategy-table td small {
+    max-width: 180px;
+  }
+}
+
+/* ───────────────────────── v0.2.0 抽题制新增 ───────────────────────── */
+.env-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.env-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.env-chip small {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.env-chip b {
+  font-size: 13px;
+  color: var(--text, #e8f0ea);
+}
+.env-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 14px;
+}
+.env-strip .env-chip {
+  padding: 5px 10px;
+}
+
+.outcome-dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.outcome-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+.outcome-dots i.on {
+  background: var(--mint);
+  border-color: var(--mint);
+}
+
+.choice-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.choice-tags em {
+  font-style: normal;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+}
+.tag-gain {
+  color: var(--mint);
+}
+.tag-risk {
+  color: var(--amber);
+}
+.tag-none {
+  color: var(--muted);
+}
+.drain-choice {
+  border-color: var(--amber);
+}
+.drain-choice .choice-index {
+  color: var(--amber);
+}
+
+/* 开局简报 + 天赋三选一 */
+.talent-screen {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 22px 60px;
+}
+.brief-head h1 {
+  margin: 10px 0 22px;
+  font-size: 26px;
+  line-height: 1.5;
+}
+.brief-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 16px;
+}
+.brief-card {
+  padding: 20px;
+}
+.brief-card h2 {
+  margin: 12px 0 8px;
+  font-size: 20px;
+}
+.brief-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.talent-pick {
+  margin-top: 22px;
+}
+.talent-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.talent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s, transform 0.18s;
+}
+.talent-card:hover {
+  border-color: var(--mint);
+  transform: translateY(-2px);
+}
+.talent-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--mint);
+}
+.talent-note {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+.talent-go {
+  font-size: 12px;
+  color: var(--text, #e8f0ea);
+}
+
+.persona-list {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0;
+  display: grid;
+  gap: 8px;
+}
+.persona-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--line);
+}
+.persona-list b {
+  font-size: 13px;
+  color: var(--purple);
+}
+.persona-list span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ghost-persona {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 10px 0;
+}
+.log-idx {
+  font-size: 11px;
+  color: var(--muted);
+  padding-top: 2px;
+}
+
+.replay-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.replay-table th,
+.replay-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.replay-table td p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.replay-table td small {
+  color: var(--amber);
+}
+.dim {
+  color: var(--muted);
+}
+.outcome-panel tr.got td:first-child {
+  color: var(--mint);
+}
+.small-note {
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .brief-grid,
+  .talent-cards {
+    grid-template-columns: 1fr;
+  }
+  .replay-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

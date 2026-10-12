@@ -1,70 +1,94 @@
-import { act, initialActor } from "./engine";
-import { ghostAt } from "./ghost";
+import { RULE_VERSION, ROUNDS } from "./config";
+import { answer, initialActor, PASS_INDEX, pass } from "./engine";
+import { ghostUpTo } from "./ghost";
 import { createWorld } from "./world";
-import { RULE_VERSION } from "./config";
-import type { World, Action, Session } from "./types";
+import { QUESTION_BY_ID } from "./content/questions";
+import { TALENT_BY_ID } from "./content/talents";
+import type { Session, World } from "./types";
+
 export function createSession(
   world: World,
-  ghostVersion: number,
   practice = false,
 ): Session {
   return {
-    schema: 1,
+    schema: 2,
     id: crypto.randomUUID(),
     world,
-    ghostVersion,
+    ghostPersona: world.ghostPersona,
     practice,
-    player: initialActor(),
-    ghost: ghostAt(world, 0, ghostVersion),
-    actions: [],
+    // 天赋还没选，开局由玩家三选一后写入 player.talent
+    player: initialActor(null),
+    ghost: ghostUpTo(world, 0, world.ghostPersona, world.ghostTalent),
+    step: 0,
     ending: null,
   };
 }
-export function step(s: Session, action: Action): Session {
-  if (s.ending || s.actions.length >= 80)
-    throw new Error("本局已结束或动作数超出限制");
-  const player = act(s.world, s.player, action);
+
+export function pickTalent(s: Session, talentId: string): Session {
+  if (!s.world.talentChoices.includes(talentId)) throw new Error("本局没有这个天赋");
+  if (!TALENT_BY_ID[talentId]) throw new Error("未知天赋");
+  if (s.step > 0 || s.player.talent) throw new Error("本局已经选过天赋");
+  return { ...s, player: { ...s.player, talent: talentId } };
+}
+
+export function step(s: Session, optionIndex: number): Session {
+  if (s.ending) throw new Error("本局已结束");
+  if (!s.player.talent) throw new Error("还没有选择天赋");
+  const questionId = s.world.questions[s.step];
+  if (!questionId) throw new Error("本局已答完");
+  const q = QUESTION_BY_ID[questionId];
+  if (!q) throw new Error("题目不存在");
+  const giveUp = optionIndex === PASS_INDEX;
+  if (!giveUp && (optionIndex < 0 || optionIndex >= q.options.length))
+    throw new Error("选项不存在");
+  const player = giveUp
+    ? pass(s.world, s.player, questionId)
+    : answer(s.world, s.player, questionId, optionIndex);
+  const step = s.step + 1;
   return {
     ...s,
     player,
-    ghost: ghostAt(s.world, player.time, s.ghostVersion),
-    actions: [...s.actions, structuredClone(action)],
+    // Ghost 只同步到「已完成这一题之前」——它此刻的选择玩家看不见。
+    ghost: ghostUpTo(s.world, step - 1, s.ghostPersona, s.world.ghostTalent),
+    step,
+    ending: step >= Math.min(ROUNDS, s.world.questions.length) ? "done" : null,
   };
 }
+
+export function isDone(s: Session): boolean {
+  return s.step >= Math.min(ROUNDS, s.world.questions.length);
+}
+
+/** 电量见底：把剩下的题一次性空过去，直接进结算。 */
+export function finish(s: Session): Session {
+  let cur = s;
+  let guard = 0;
+  while (!isDone(cur) && guard++ <= ROUNDS) cur = step(cur, PASS_INDEX);
+  return { ...cur, ending: "done" };
+}
+
 export function verifyExport(data: unknown): Session {
   if (!data || typeof data !== "object") throw new Error("存档格式无效");
   const s = data as Session;
   if (
-    s.schema !== 1 ||
+    s.schema !== 2 ||
     s.world?.version !== RULE_VERSION ||
-    !Array.isArray(s.actions) ||
-    s.actions.length > 80 ||
     typeof s.id !== "string" ||
-    s.id.length > 128 ||
     typeof s.practice !== "boolean" ||
-    ![1, 2].includes(s.ghostVersion) ||
-    ![null, "relay", "check"].includes(s.ending)
+    typeof s.step !== "number"
   )
     throw new Error("存档版本或结构不兼容");
-  if (s.world.preset !== undefined && !["A", "B"].includes(s.world.preset))
-    throw new Error("无效案例");
   const world = createWorld(s.world.seed, s.world.preset);
   if (JSON.stringify(world) !== JSON.stringify(s.world))
     throw new Error("世界配置与编号不一致");
-  let rebuilt = {
-    ...createSession(world, s.ghostVersion, s.practice),
-    id: s.id,
-  };
-  for (const action of s.actions) rebuilt = step(rebuilt, action);
-  if (s.ending && rebuilt.player.time !== 160)
-    throw new Error("尚未结束的存档不能标记结局");
-  if (s.ending === "relay" && !rebuilt.player.briefed)
-    throw new Error("未传达安排，无法据此组织同行者");
-  rebuilt.ending = s.ending;
+  let rebuilt: Session = { ...createSession(world, s.practice), id: s.id };
+  if (s.player.talent) rebuilt = pickTalent(rebuilt, s.player.talent);
+  for (const a of s.player.answers) rebuilt = step(rebuilt, a.optionIndex);
   if (
-    JSON.stringify(rebuilt.player) !== JSON.stringify(s.player) ||
-    JSON.stringify(rebuilt.ghost) !== JSON.stringify(s.ghost)
+    rebuilt.player.energy !== s.player.energy ||
+    JSON.stringify(rebuilt.player.delivered) !==
+      JSON.stringify(s.player.delivered)
   )
     throw new Error("记录校验失败，请新开一局");
-  return rebuilt;
+  return { ...rebuilt, ending: s.ending };
 }

@@ -1,17 +1,21 @@
+import { QUESTIONS } from "../game/content/questions";
+import { TALENTS } from "../game/content/talents";
+import { PERSONAS } from "../game/content/personas";
+import { ROUNDS } from "../game/config";
 import type { Profile } from "../game/types";
+
 interface Props {
   profile: Profile;
   hasSession: boolean;
   onBegin: (preset?: "A" | "B") => void;
   onContinue: () => void;
-  onReset: () => void;
 }
+
 export default function StartScreen({
   profile,
   hasSession,
   onBegin,
   onContinue,
-  onReset,
 }: Props) {
   return (
     <main className="start-screen">
@@ -29,14 +33,14 @@ export default function StartScreen({
             你会如何使用？
           </h1>
           <p className="hero-intro">
-            地震之后，灯光熄灭。
+            灾后的废墟里，你摸出手机。
             <br />
-            你的手机，还有最后一点电。
+            屏幕上写着：1%。
           </p>
           <p className="muted hero-description">
-            每一次发送、等待和亮屏，都在改变下一步。
+            十道题，每道题都在烧这一格电。
             <br />
-            与你的镜像一起走到最后，看看这一点余量能走多远。
+            同一个世界里，还有一个和你抽到同一批题的 Ghost——它按性格花钱，不做最优解。
           </p>
           <div className="hero-actions">
             <button className="primary" onClick={() => onBegin()}>
@@ -50,13 +54,13 @@ export default function StartScreen({
           </div>
           <div className="hero-facts">
             <span>◷ 3–5 分钟</span>
-            <span>◇ 4–6 次关键选择</span>
-            <span>Ⅱ 思考时暂停</span>
+            <span>◇ 每局 {ROUNDS} 道题</span>
+            <span>◈ 题库 {QUESTIONS.length} 道</span>
           </div>
         </div>
         <div
           className="mirror-art"
-          aria-label="你与Ghost共享一份起点，选择不同的路线"
+          aria-label="你与 Ghost 共享一份起点，选择不同的路线"
         >
           <div className="orbit orbit-one" />
           <div className="orbit orbit-two" />
@@ -80,50 +84,59 @@ export default function StartScreen({
           <span className="art-footnote">SAME WORLD. DIFFERENT CHOICES.</span>
         </div>
       </section>
+
       <section className="start-bottom">
         <div className="ghost-intro panel">
           <div className="panel-kicker">
-            <span className="ghost-dot" /> MEET YOUR GHOST{" "}
-            <span>V{profile.ghostVersion}</span>
+            <span className="ghost-dot" /> MEET YOUR GHOST
           </div>
           <h2>
             它不是最优解。
             <br />
-            它是习惯先行动的你。
+            它是另一种花钱的习惯。
           </h2>
           <p>
-            有消息就发送，有事情就处理。它可能多耗一点电，也可能比你先抓住机会。
+            每局随机生成一种性格，共 {PERSONAS.length} 种：有人见事就办，有人一格电
+            掰成两半用，有人专挑没把握的那个。
           </p>
-          <div className="ghost-policy">
-            {profile.ghostVersion === 1
-              ? "当前习惯：及时发送 · 持续光信号 · 快速展示"
-              : "已经成长：视线清楚时，使用短光信号"}
-          </div>
-          {profile.ghostVersion > 1 && (
-            <button className="text-button" onClick={onReset}>
-              重置为初始 Ghost
-            </button>
-          )}
-          <small>成长由你同意，并从下一局生效。</small>
+          <ul className="persona-list">
+            {PERSONAS.map((p) => (
+              <li key={p.id}>
+                <b>{p.name}</b>
+                <span>{p.note}</span>
+              </li>
+            ))}
+          </ul>
+          <small>它和你抽到同一批题，赌运也一样。差别只来自选择。</small>
         </div>
+
         <div className="demo-intro">
           <div className="eyebrow">QUICK EXPLORATION</div>
           <h2>也可以，从同一个起点试试。</h2>
-          <p className="muted">固定环境，方便演示与比较。你的选择仍然自由。</p>
+          <p className="muted">
+            固定环境与题目，方便演示和比较。开局还会随机给 {TALENTS.length}{" "}
+            个天赋中的三个，由你选一个。
+          </p>
           <button className="demo-button" onClick={() => onBegin("A")}>
             <span>
-              <strong>案例 A · 留下余量</strong>
-              <small>一次合并，能为后来留下什么？</small>
+              <strong>案例 A · 局部有网</strong>
+              <small>深夜，有纸笔，轻伤。手上这点电够做几件事？</small>
             </span>
             <span>↗</span>
           </button>
           <button className="demo-button" onClick={() => onBegin("B")}>
             <span>
-              <strong>案例 B · 抓住窗口</strong>
-              <small>当信号变差，等待意味着什么？</small>
+              <strong>案例 B · 彻底断网</strong>
+              <small>白天，严寒，持续失血，两手空空。这一次该怎么花？</small>
             </span>
             <span>↗</span>
           </button>
+          {profile.completed.length > 0 && (
+            <p className="muted small-note">
+              已经玩过 {profile.completed.length} 局，历史最高分{" "}
+              {profile.best.toFixed(1)}。
+            </p>
+          )}
         </div>
       </section>
     </main>

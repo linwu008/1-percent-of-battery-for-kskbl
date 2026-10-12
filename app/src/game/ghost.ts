@@ -1,87 +1,87 @@
-import { act, choices, initialActor } from "./engine";
-import { createWorld } from "./world";
-import type { Actor, Action, World, Profile, Session } from "./types";
-export function ghostAt(w: World, seconds: number, version: number): Actor {
-  if (
-    ![1, 2].includes(version) ||
-    !Number.isInteger(seconds) ||
-    seconds < 0 ||
-    seconds > 160
-  )
-    throw new Error("无效Ghost版本或时间");
-  let a = initialActor();
-  while (a.time < seconds) {
-    const options = choices(w, a).filter((c) => !c.disabled);
-    let action: Action | undefined;
-    const send = (item: string) =>
-      options.find(
-        (c) =>
-          c.action.kind === "send" &&
-          c.action.items.length === 1 &&
-          c.action.items[0] === item,
-      )?.action;
-    if (a.time < 60 || a.time >= 110)
-      action = send("ack") ?? send("position") ?? send("people");
-    if (!action && a.time >= 60 && a.time < 80) {
-      const duration = version === 2 && w.visibility === "clear" ? 10 : 20;
-      action =
-        options.find(
-          (c) => c.action.kind === "light" && c.action.duration === duration,
-        )?.action ?? options.find((c) => c.action.kind === "light")?.action;
-    }
-    if (!action && a.time >= 100)
-      action =
-        options.find(
-          (c) => c.action.kind === "brief" && c.action.method === "screen",
-        )?.action ?? options.find((c) => c.action.kind === "brief")?.action;
-    action ??= options.find((c) => c.action.kind === "wait")?.action;
-    if (!action) throw new Error("Ghost没有可推进动作");
-    a = act(w, a, action, seconds);
+import { FULL_ENERGY, OUTCOME_WEIGHTS } from "./config";
+import { PERSONA_BY_ID } from "./content/personas";
+import { QUESTION_BY_ID } from "./content/questions";
+import { answer, costOf, initialActor, pass } from "./engine";
+import type { Actor, Option, Profile, World } from "./types";
+
+/**
+ * Ghost 是一条独立的习惯：同一批题，同一个赌运，另一种花法。
+ * 它不做最优解——性格决定了它看重便宜、看重收益，还是看重冒险。
+ */
+function scoreOption(
+  opt: Option,
+  w: World,
+  a: Actor,
+  personaId: string,
+): number {
+  const p = PERSONA_BY_ID[personaId];
+  if (!p) return 0;
+  const cost = costOf(opt, w.env, a.talent);
+  if (cost > a.energy) return -Infinity;
+
+  let s = 0;
+  // 越便宜越讨它喜欢
+  s += p.w.cheap * (1 - Math.min(1, cost / 250));
+  // 收益按成果权重折算
+  const gainOutcome = opt.gain?.outcome ?? opt.gamble?.outcome;
+  if (gainOutcome) {
+    const weight = OUTCOME_WEIGHTS[gainOutcome] ?? 1;
+    const points = opt.gain?.points ?? opt.gamble?.points ?? 0;
+    s += p.w.gain * (points / 3) * (weight / 3);
   }
+  // 对没把握的事的态度
+  if (opt.gamble) s += p.w.gamble;
+  // 性格偏好的标签
+  if (opt.tags.some((t) => p.w.tags.includes(t))) s += 0.8;
+  // 牵涉到别人的选项
+  if (opt.tags.includes("social")) s += p.w.social * 0.4;
+  return s;
+}
+
+export function ghostStep(
+  w: World,
+  questionId: string,
+  personaId: string,
+  talentId: string,
+  a: Actor,
+): Actor {
+  const q = QUESTION_BY_ID[questionId];
+  if (!q) return a;
+  let best = -Infinity;
+  let bestIndex = 0;
+  q.options.forEach((opt, i) => {
+    if (opt.onlyIf && !opt.onlyIf.in.includes(String(w.env[opt.onlyIf.key])))
+      return;
+    const s = scoreOption(opt, w, a, personaId);
+    if (s > best) {
+      best = s;
+      bestIndex = i;
+    }
+  });
+  // 全都买不起就跳过这一题——它也会攥着手机干瞪眼
+  if (!Number.isFinite(best)) return pass(w, a, questionId);
+  return answer(w, a, questionId, bestIndex);
+}
+
+/** 重放 Ghost 的前 n 道题。玩家做到第 n 题时，只能看到它前 n 题的状态。 */
+export function ghostUpTo(
+  w: World,
+  n: number,
+  personaId: string,
+  talentId: string,
+): Actor {
+  let a = initialActor(talentId);
+  for (let i = 0; i < Math.min(n, w.questions.length); i++)
+    a = ghostStep(w, w.questions[i], personaId, talentId, a);
   return a;
 }
+
+export function fullEnergyRatio(a: Actor): number {
+  return a.energy / FULL_ENERGY;
+}
+
 export function emptyProfile(): Profile {
-  return { schema: 1, ghostVersion: 1, completed: [], observations: [] };
+  return { schema: 2, completed: [], best: 0 };
 }
-export function observe(p: Profile, s: Session): Profile {
-  if (
-    s.practice ||
-    !s.ending ||
-    s.player.time !== 160 ||
-    p.completed.includes(s.id)
-  )
-    return p;
-  const next = structuredClone(p);
-  next.completed.push(s.id);
-  const short = s.player.logs.some(
-    (l) =>
-      l.action.kind === "light" &&
-      l.action.duration === 10 &&
-      l.cost === 20 &&
-      l.gained.includes("光信号确认区域"),
-  );
-  if (s.world.visibility === "clear" && short && s.ghostVersion === 1)
-    next.observations.push(s.id);
-  return next;
-}
-export function growthOffer(p: Profile): boolean {
-  if (p.ghostVersion !== 1 || p.observations.length < 2) return false;
-  let saved = 0;
-  for (const firstClose of [15, 32, 45])
-    for (const visibility of ["clear", "obstructed"] as const) {
-      const w = { ...createWorld("growth", "A"), firstClose, visibility };
-      const a = { ...initialActor(), time: 60, energy: 30 };
-      const old = act(w, a, { kind: "light", duration: 20 });
-      const candidate = act(w, a, {
-        kind: "light",
-        duration: visibility === "clear" ? 10 : 20,
-      });
-      if (candidate.light < old.light) return false;
-      saved += candidate.energy - old.energy;
-    }
-  return saved > 0;
-}
-export function acceptGrowth(p: Profile): Profile {
-  if (!growthOffer(p)) return p;
-  return { ...p, ghostVersion: 2 };
-}
+
+export type { Actor };

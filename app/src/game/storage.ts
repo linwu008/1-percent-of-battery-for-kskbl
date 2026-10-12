@@ -50,17 +50,13 @@ export function loadProfile(): Profile {
     ) as Profile | null;
     if (
       !p ||
-      p.schema !== 1 ||
-      ![1, 2].includes(p.ghostVersion) ||
+      p.schema !== 2 ||
       !Array.isArray(p.completed) ||
-      !Array.isArray(p.observations) ||
+      typeof p.best !== "number" ||
+      !Number.isFinite(p.best) ||
       p.completed.length > 10000 ||
-      p.observations.length > 10000 ||
-      ![...p.completed, ...p.observations].every(
-        (x) => typeof x === "string",
-      ) ||
-      new Set(p.completed).size !== p.completed.length ||
-      new Set(p.observations).size !== p.observations.length
+      !p.completed.every((x) => typeof x === "string") ||
+      new Set(p.completed).size !== p.completed.length
     )
       return emptyProfile();
     return p;
