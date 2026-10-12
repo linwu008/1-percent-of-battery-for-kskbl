@@ -5,59 +5,46 @@ import { useEffect, useState } from "react";
  * 尊重系统的「减少动效」设置，并允许随时点击跳过。
  */
 export function useTypewriter(text: string, speed = 26, instant = false) {
-  const [count, setCount] = useState(0);
+  const [frame, setFrame] = useState({ text, count: 0 });
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+  );
+  const count = frame.text === text ? frame.count : 0;
+  const complete = instant || reduced || count >= text.length;
 
   useEffect(() => {
-    setCount(0);
-    if (instant) {
-      setCount(text.length);
-      return;
-    }
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setCount(text.length);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setCount((c) => {
-        if (c >= text.length) {
-          window.clearInterval(id);
-          return c;
-        }
-        return c + 1;
-      });
-    }, speed);
-    return () => window.clearInterval(id);
-  }, [text, speed, instant]);
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
-  const skip = () => setCount(text.length);
-  return { shown: text.slice(0, count), done: count >= text.length, skip };
+  useEffect(() => {
+    setFrame({ text, count: 0 });
+  }, [text]);
+
+  useEffect(() => {
+    if (complete) return;
+    const pause = /[，。！？；…]/.test(text[count - 1] ?? "") ? 150 : speed;
+    const id = window.setTimeout(() => setFrame({ text, count: count + 1 }), pause);
+    return () => window.clearTimeout(id);
+  }, [text, count, speed, complete]);
+
+  const skip = () => setFrame({ text, count: text.length });
+  return { shown: complete ? text : text.slice(0, count), done: complete, skip };
 }
 
 /**
  * 按顺序逐段打完：前一段打完才开始下一段。
  * skip() 一次性把剩下的全部显示出来（后面的段落不再逐字）。
  */
-export function useTypewriterAll(lines: string[], speed = 26) {
-  const [stage, setStage] = useState(0);
-  const [rushed, setRushed] = useState(false);
-  const current = useTypewriter(lines[stage] ?? "", speed, rushed);
-
-  useEffect(() => setStage(0), [lines]);
-
-  useEffect(() => {
-    if (stage >= lines.length - 1) return;
-    if (!current.done) return;
-    const id = window.setTimeout(() => setStage((n) => n + 1), 240);
-    return () => window.clearTimeout(id);
-  }, [current.done, lines.length, stage]);
-
-  const skip = () => {
-    setRushed(true);
-    setStage(lines.length - 1);
-  };
-  const done = stage >= lines.length - 1 && current.done;
-  return { stage, shown: current.shown, done, skip };
+export function useTypewriterAll(lines: string[], speed = 26, instant = false) {
+  const current = useTypewriter(lines.join("\n\n"), speed, instant);
+  let offset = 0;
+  let stage = 0;
+  while (stage < lines.length - 1 && current.shown.length >= offset + lines[stage].length + 2) {
+    offset += lines[stage].length + 2;
+    stage++;
+  }
+  return { stage, shown: current.shown.slice(offset), done: current.done, skip: current.skip };
 }

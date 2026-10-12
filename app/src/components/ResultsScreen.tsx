@@ -82,7 +82,7 @@ export default function ResultsScreen({
     <main className="results-screen">
       <div className="result-top">
         <div>
-          <span className="eyebrow">YOUR LAST ONE PERCENT</span>
+          <span className="eyebrow">DEBRIEF / 最后的百分之一</span>
           <h1>
             {result.label}
             <span className="result-star">✳</span>
@@ -110,7 +110,7 @@ export default function ResultsScreen({
 
       <div className="score-grid">
         <div className="score-card player">
-          <span>YOU / 你这一局</span>
+          <span>YOU / 你这一局 · 模拟存活概率</span>
           <strong data-testid="player-score">{pct(result.ps.p)}</strong>
           <div>
             <span>
@@ -136,7 +136,7 @@ export default function ResultsScreen({
           </div>
         </div>
         <div className="score-card ghost">
-          <span>GHOST / {persona?.name ?? "另一种花法"}</span>
+          <span>GHOST / {persona?.name ?? "另一种花法"} · 模拟存活概率</span>
           <strong data-testid="ghost-score">{pct(result.gs.p)}</strong>
           <div>
             <span>

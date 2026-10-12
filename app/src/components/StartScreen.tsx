@@ -3,6 +3,7 @@ import { TALENTS } from "../game/content/talents";
 import { PERSONAS } from "../game/content/personas";
 import { MAX_ROUNDS, MIN_ROUNDS } from "../game/config";
 import type { Profile } from "../game/types";
+import StageScene from "./StageScene";
 
 interface Props {
   profile: Profile;
@@ -40,7 +41,7 @@ export default function StartScreen({
           <p className="muted hero-description">
             每一步都会烧这一格电，每一步固定推进 15 分钟——不操作，电池也在掉。
             <br />
-            同一个世界里，还有一个和你抽到同一批题的 Ghost——它按性格花钱，不做最优解。
+            同一个世界里，还有一个和你抽到同一批题的 Ghost。它按自己的习惯使用这点电。
           </p>
           <div className="hero-actions">
             <button className="primary" onClick={() => onBegin()}>
@@ -62,6 +63,7 @@ export default function StartScreen({
           className="mirror-art"
           aria-label="你与 Ghost 共享一份起点，选择不同的路线"
         >
+          <StageScene hero />
           <div className="orbit orbit-one" />
           <div className="orbit orbit-two" />
           <div className="orbit orbit-three" />
@@ -91,23 +93,23 @@ export default function StartScreen({
             <span className="ghost-dot" /> MEET YOUR GHOST
           </div>
           <h2>
-            它不是最优解。
+            同一个世界。
             <br />
-            它是另一种花钱的习惯。
+            另一种使用余量的习惯。
           </h2>
           <p>
             每局随机生成一种性格，共 {PERSONAS.length} 种：有人见事就办，有人一格电
             掰成两半用，有人专挑没把握的那个。
           </p>
-          <ul className="persona-list">
+          <details className="persona-details"><summary>查看 {PERSONAS.length} 种 Ghost 习惯</summary><ul className="persona-list">
             {PERSONAS.map((p) => (
               <li key={p.id}>
                 <b>{p.name}</b>
                 <span>{p.note}</span>
               </li>
             ))}
-          </ul>
-          <small>它和你抽到同一批题，赌运也一样。差别只来自选择。</small>
+          </ul></details>
+          <small>它和你共享题目与赌运，各自使用自己的天赋。Ghost 不是最优解。</small>
         </div>
 
         <div className="demo-intro">
@@ -133,8 +135,8 @@ export default function StartScreen({
           </button>
           {profile.completed.length > 0 && (
             <p className="muted small-note">
-              已经玩过 {profile.completed.length} 局，历史最高分{" "}
-              {profile.best.toFixed(1)}。
+              已体验 {profile.completed.length} 个世界，历史最高模拟存活概率{" "}
+              {(profile.best * 100).toFixed(1)}%。
             </p>
           )}
         </div>

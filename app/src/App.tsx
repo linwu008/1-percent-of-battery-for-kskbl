@@ -3,7 +3,6 @@ import { RULE_VERSION } from "./game/config";
 import { createWorld } from "./game/world";
 import { createSession, finish, isDone, pickTalent, step } from "./game/replay";
 import { attachOracle } from "./game/oracle";
-import { emptyProfile } from "./game/ghost";
 import { survivalOf } from "./game/scoring";
 import {
   loadSession,
@@ -25,6 +24,14 @@ export default function App() {
   const [home, setHome] = useState(!loaded.session);
   const [error, setError] = useState<string | null>(loaded.error);
   const lock = useRef(false);
+  const [instant, setInstant] = useState(() => {
+    try { return localStorage.getItem("one-percent-instant-text") === "true"; }
+    catch { return false; }
+  });
+  const toggleInstant = () => setInstant((value) => {
+    try { localStorage.setItem("one-percent-instant-text", String(!value)); } catch { /* 本次会话仍可切换 */ }
+    return !value;
+  });
 
   const exportRecovery = () => {
     if (!loaded.recovery) return;
@@ -143,7 +150,7 @@ export default function App() {
         </button>
         <div className="header-meta">
           <span className="live-dot" />
-          资源决策模拟器 <span className="version">v{RULE_VERSION}</span>
+          资源决策模拟器 <span className="version">v0.5.0</span>
         </div>
       </header>
       {loaded.recovery && (
@@ -168,7 +175,7 @@ export default function App() {
           onContinue={() => setHome(false)}
         />
       ) : !session.player.talent ? (
-        <TalentScreen session={session} onPick={pick} />
+        <TalentScreen key={session.id} session={session} onPick={pick} instant={instant} onToggleInstant={toggleInstant} />
       ) : isDone(session) ? (
         <ResultsScreen
           session={session}
@@ -178,10 +185,13 @@ export default function App() {
         />
       ) : (
         <EventScreen
+          key={`${session.id}:${session.step}`}
           session={session}
           onChoose={choose}
           onDrain={drain}
           onAbandon={abandon}
+          instant={instant}
+          onToggleInstant={toggleInstant}
         />
       )}
       <footer className="site-footer">

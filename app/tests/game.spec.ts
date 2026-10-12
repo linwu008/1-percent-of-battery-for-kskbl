@@ -6,7 +6,9 @@ async function answerAll(page: Page, rounds = 12) {
     const alive = await page.getByTestId("player-score").count();
     if (alive) return;
     const enabled = page.locator(".choices button:not([disabled])");
+    await page.locator(".event-story").click();
     await enabled.first().click();
+    await page.getByTestId("confirm-action").click();
   }
 }
 
@@ -75,10 +77,21 @@ test("打字机只是显示方式：不推进进度，也不掉电", async ({ pa
   await expect(page.locator(".event-title")).toHaveCount(0);
 });
 
-test("键盘 1–9 可以直接选择", async ({ page }) => {
+test("数字只选中，Enter先跳字再确认，长按不能连答", async ({ page }) => {
   await startRun(page, "A");
   await page.keyboard.press("1");
+  await expect(page.getByTestId("option-0")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("battery")).toContainText("1.000%");
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("step-label")).toContainText("第 1 步");
+  await page.keyboard.press("Enter");
   await expect(page.getByText(/第 2 步/)).toBeVisible();
+  await page.keyboard.down("1");
+  await page.keyboard.down("Enter");
+  await page.keyboard.down("Enter");
+  await page.keyboard.up("Enter");
+  await page.keyboard.up("1");
+  await expect(page.getByTestId("step-label")).toContainText("第 2 步");
 });
 
 test("每一题都给出标价，且明确写出做完会剩多少", async ({ page }) => {
@@ -122,7 +135,50 @@ test("权重在过程中完全不显示：选项上没有档位标签", async ({
   await expect(page.locator(".event-panel").getByText(/题目权重/)).toHaveCount(0);
   // 玩一步，侧栏「上一步的结果」里也不许泄露
   await page.locator(".choices button:not([disabled])").first().click();
+  await page.locator(".event-story").click();
+  await page.getByTestId("confirm-action").click();
   await expect(page.locator(".last-action .tag-tier")).toHaveCount(0);
+});
+
+test("鼠标选择不提交，情报记录不耗电，刷新恢复同一步", async ({ page }) => {
+  await startRun(page, "A");
+  await page.locator(".event-story").click();
+  await page.getByTestId("option-0").dblclick();
+  await expect(page.getByTestId("battery")).toContainText("1.000%");
+  await page.getByRole("button", { name: "已知信息", exact: true }).click();
+  await expect(page.getByTestId("intel-panel")).toContainText("局部可用");
+  await expect(page.getByTestId("confirm-action")).toBeDisabled();
+  await page.getByRole("button", { name: "行动记录", exact: true }).click();
+  await expect(page.getByTestId("log-panel")).toContainText("还没有行动记录");
+  await page.getByRole("button", { name: "行动", exact: true }).click();
+  await page.getByTestId("confirm-action").click();
+  await expect(page.getByTestId("step-label")).toContainText("第 2 步");
+  const battery = await page.getByTestId("battery").textContent();
+  await page.reload();
+  await expect(page.getByTestId("step-label")).toContainText("第 2 步");
+  await expect(page.getByTestId("battery")).toHaveText(battery!);
+  await expect(page.getByTestId("confirm-action")).toBeDisabled();
+  await page.getByRole("button", { name: "行动记录", exact: true }).click();
+  await expect(page.locator(".log-list li")).toHaveCount(1);
+});
+
+test("减少动效与立即显示都保留完整剧情，关闭设置后下一段恢复逐字", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await startRun(page, "A");
+  await expect(page.locator(".event-story")).not.toHaveClass(/typing/);
+  await expect(page.locator(".event-story")).not.toBeEmpty();
+  await page.getByRole("button", { name: "立即显示剧情" }).click();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.getByTestId("option-0").click();
+  await page.getByTestId("confirm-action").click();
+  await expect(page.locator(".event-story")).not.toHaveClass(/typing/);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "恢复逐字剧情" })).toBeVisible();
+  await page.getByRole("button", { name: "恢复逐字剧情" }).click();
+  await page.locator(".event-story").click();
+  await page.getByTestId("option-0").click();
+  await page.getByTestId("confirm-action").click();
+  await expect(page.locator(".event-story")).toHaveClass(/typing/);
 });
 
 test("结算页揭晓两层权重、给出曲线与公式，并停在顶部", async ({ page }) => {
@@ -221,4 +277,19 @@ test("固定案例可复现：同一种子两次开局题目一致", async ({ pa
   await startRun(page, "A");
   const second = await readStory(page);
   expect(second).toBe(first);
+});
+
+test("桌面选项可滚到无遮挡处，窄屏确认紧跟选项", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await startRun(page, "A");
+  await page.locator(".event-story").click();
+  const choice = page.locator(".choice").last();
+  await choice.scrollIntoViewIfNeeded();
+  const box = (await choice.boundingBox())!;
+  const dock = (await page.locator(".decision-dock").boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(dock.y);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileDock = (await page.locator(".decision-dock").boundingBox())!;
+  const ghost = (await page.locator(".game-aside").boundingBox())!;
+  expect(mobileDock.y + mobileDock.height).toBeLessThanOrEqual(ghost.y);
 });

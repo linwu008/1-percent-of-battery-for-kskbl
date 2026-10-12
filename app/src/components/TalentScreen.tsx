@@ -10,9 +10,13 @@ import type { Session } from "../game/types";
 export default function TalentScreen({
   session: s,
   onPick,
+  instant,
+  onToggleInstant,
 }: {
   session: Session;
   onPick: (talentId: string) => void;
+  instant: boolean;
+  onToggleInstant: () => void;
 }) {
   const persona = PERSONA_BY_ID[s.ghostPersona];
   const chips = envSummary(s.world.env).map((line) => {
@@ -23,7 +27,7 @@ export default function TalentScreen({
     s.world.seed,
     s.world.env,
   ]);
-  const typed = useTypewriterAll(lines, 22);
+  const typed = useTypewriterAll(lines, 30, instant);
   const idle = idleDrain(s.world.env);
 
   return (
@@ -33,7 +37,8 @@ export default function TalentScreen({
           {s.world.preset ? `固定案例 ${s.world.preset}` : "新的随机人生"}{" "}
           <span className="seed">#{s.world.seed}</span>
         </span>
-        <h1>在按下第一次亮屏之前，你先看清自己在哪儿。</h1>
+        <h1>醒来以后，<span className="mint">还剩 1%。</span></h1>
+        <p className="muted">先看清处境，再决定你要带着什么习惯出发。</p>
       </div>
 
       <section
@@ -42,6 +47,7 @@ export default function TalentScreen({
       >
         <div className="panel-kicker">
           <span className="tiny-line" /> 你现在所处的处境
+          <button className="type-mode" onClick={(e) => { e.stopPropagation(); onToggleInstant(); }} aria-label={instant ? "恢复逐字剧情" : "立即显示剧情"}>{instant ? "逐字 ○" : "逐字 ●"}</button>
         </div>
         {lines.map((line, i) => (
           <p
