@@ -4,6 +4,11 @@
 每一步固定推进 **15 分钟**——就算你什么都不做，电池也在自己往下掉。
 结算不再给分数，而是给一个**存活概率**：你有多大可能被找到、被救出、并且撑到那一刻。
 
+## 在线试玩
+
+当前版本：**https://one-percent-battery-v3.app.workbuddy.host/**
+上一版（v0.2.0，保留用于对比）：https://one-percent-battery.app.workbuddy.host/
+
 ## 启动
 
 需要 Node.js 24 或更新的兼容版本。测试环境为 Node 24.20.0、Windows、Edge。
