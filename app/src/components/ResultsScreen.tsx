@@ -5,6 +5,7 @@ import {
   OUTCOME_WEIGHTS,
   QUESTION_WEIGHT,
   STEP_MINUTES,
+  idleDrain,
   SURVIVAL,
   TIER_LABELS,
   TIER_WEIGHT,
@@ -33,11 +34,13 @@ export default function ResultsScreen({
   profile,
   onNew,
   onReplay,
+  onHome,
 }: {
   session: Session;
   profile: Profile;
   onNew: () => void;
   onReplay: () => void;
+  onHome: () => void;
 }) {
   const env = s.world.env;
   const result = compare(s.player, s.ghost, env);
@@ -80,6 +83,7 @@ export default function ResultsScreen({
 
   return (
     <main className="results-screen">
+      <div className="debrief-banner"><span>SIMULATION COMPLETE</span><span>本局记录已生成 / {s.world.seed}</span></div>
       <div className="result-top">
         <div>
           <span className="eyebrow">DEBRIEF / 最后的百分之一</span>
@@ -103,7 +107,7 @@ export default function ResultsScreen({
             <small> 个百分点</small>
           </strong>
           <small>
-            规则 {s.world.version} · 历史最高存活概率 {pct(best)}
+            规则 {s.world.version} · 跨版本历史最高存活概率 {pct(best)}
           </small>
         </div>
       </div>
@@ -246,15 +250,15 @@ export default function ResultsScreen({
             })}
           </div>
           <p>
-            <strong>你的天赋</strong>
+            <strong>你的策略</strong>
             <br />
-            {talent ? `${talent.name}：${talent.note}` : "本局没有选择天赋。"}
+            {talent ? `${talent.name}：${talent.note}` : "本局没有选择策略。"}
           </p>
           <p>
             <strong>Ghost 的性格</strong>
             <br />
             {persona?.name}：{persona?.note}
-            {ghostTalent ? ` 它自己的天赋是「${ghostTalent.name}」。` : ""}
+            {ghostTalent ? ` 它自动选择的策略是「${ghostTalent.name}」。` : ""}
           </p>
           <p>
             <strong>公平对照</strong>
@@ -448,10 +452,10 @@ export default function ResultsScreen({
         </p>
         <p>
           P(撑到救援) = {SURVIVAL.endureBase} + {SURVIVAL.endureSpan} ×
-          剩余电量比例 − {SURVIVAL.timeStepPenalty} × 已走步数 − 伤势惩罚 − 温度惩罚 −
+          剩余电量比例 − {SURVIVAL.timeStepPenalty} ×（已过分钟 ÷ {STEP_MINUTES}）− 伤势惩罚 − 温度惩罚 −
           关机惩罚（电量归零时 {SURVIVAL.blackoutPenalty}，否则 0），下限 0.03。
           本局：剩余 {(s.player.energy / 1000).toFixed(3)}，走了{" "}
-          {s.player.answers.length} 步（共 {(s.player.answers.length * STEP_MINUTES)} 分钟），
+          {s.player.answers.length} 步（共 {result.player.minutes} 分钟），
           伤势 {SURVIVAL.injuryPenalty[env.injury]}，温度 {SURVIVAL.tempPenalty[env.temp]}，
           关机 {s.player.energy === 0 ? SURVIVAL.blackoutPenalty : 0}，
           这一项 = {pct(result.ps.endure)}。
@@ -483,9 +487,9 @@ export default function ResultsScreen({
         </p>
         <p>
           耗电口径：实际耗电 = 名义标价 × 环境倍率（温度 1.0~1.25，亮屏类再乘信号倍率
-          1.0~1.3）× 整体倍率 1.3，再算天赋折扣；
-          此外每 {STEP_MINUTES} 分钟固定自然损耗 {money(result.player.idle)} 级别的电
-          （本局每步 {s.player.answers[0]?.idleDrain ?? 0} 格），不操作也掉。
+          1.0~1.3）× 整体倍率 1.3，再算策略折扣；
+          自然损耗按每 {STEP_MINUTES} 分钟 {money(idleDrain(env))} 为基准，随本步实际时长按比例取整，电量不足时扣到零。
+          本局累计自然损耗 {money(result.player.idle)}，不操作也掉。
         </p>
         <p>
           赌的次数：你 {result.player.gambles} 次，中了 {result.player.gamblesWon} 次。
@@ -496,7 +500,8 @@ export default function ResultsScreen({
       </details>
 
       <div className="result-actions">
-        <button className="primary" onClick={onNew}>
+        <button className="primary" onClick={onHome}>返回主界面</button>
+        <button className="secondary" onClick={onNew}>
           再开一局 ↗
         </button>
         <button className="secondary" onClick={onReplay}>

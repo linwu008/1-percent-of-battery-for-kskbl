@@ -2,6 +2,7 @@ import type { Question } from "../types";
 import { EARLY_EXTRA } from "./bank/early";
 import { MID_EXTRA } from "./bank/mid";
 import { LATE_EXTRA } from "./bank/late";
+import { FOURTH_OPTIONS } from "./fourthOptions";
 
 /**
  * 题库。一局随机抽 10 道（早 3 / 中 4 / 晚 3），题库越大越难被背下来。
@@ -1216,7 +1217,12 @@ export const QUESTIONS: Question[] = [
   ...EARLY_EXTRA,
   ...MID_EXTRA,
   ...LATE_EXTRA,
-];
+].map((question) => ({
+  ...question,
+  options: FOURTH_OPTIONS[question.id]
+    ? [...question.options, FOURTH_OPTIONS[question.id]]
+    : question.options,
+}));
 
 export const QUESTION_BY_ID: Record<string, Question> = Object.fromEntries(
   QUESTIONS.map((q) => [q.id, q]),

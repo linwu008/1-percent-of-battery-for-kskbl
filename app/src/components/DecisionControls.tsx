@@ -1,12 +1,8 @@
 export type DecisionView = "action" | "intel" | "log";
 
-export default function DecisionControls({ view, onView, label, canConfirm, typing, onConfirm }: {
+export default function DecisionControls({ view, onView }: {
   view: DecisionView;
   onView: (view: DecisionView) => void;
-  label?: string;
-  canConfirm: boolean;
-  typing: boolean;
-  onConfirm: () => void;
 }) {
   return (
     <nav className="decision-controls" aria-label="决策操作">
@@ -18,12 +14,6 @@ export default function DecisionControls({ view, onView, label, canConfirm, typi
           </button>
         ))}
       </div>
-      <button className="confirm-action" data-testid="confirm-action" disabled={!canConfirm}
-        onClick={(event) => { if (event.detail <= 1) onConfirm(); }} title={label ? `确认：${label}` : "请先选择一个行动"}>
-        <span><small>{typing ? "先读完，再决定" : label ? "已选定 · 等待确认" : "尚未选择行动"}</small>
-          <strong>{typing && label ? "显示完整剧情" : label ? `确认：${label}` : "选择后确认"}</strong></span>
-        <span className="enter-key" aria-hidden="true">↵</span>
-      </button>
     </nav>
   );
 }

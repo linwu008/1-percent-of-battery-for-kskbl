@@ -20,6 +20,7 @@ export default function StartScreen({
 }: Props) {
   return (
     <main className="start-screen">
+      <div className="lobby-heading"><span className="eyebrow">SIMULATION TERMINAL</span><span>选择一次，改变余下的每一步。</span></div>
       <section className="hero">
         <div className="hero-copy">
           <div className="eyebrow">
@@ -39,7 +40,7 @@ export default function StartScreen({
             屏幕上写着：1%。
           </p>
           <p className="muted hero-description">
-            每一步都会烧这一格电，每一步固定推进 15 分钟——不操作，电池也在掉。
+            每一步推进约半小时，每一点电都有代价。阅读与思考时，世界暂时停下。
             <br />
             同一个世界里，还有一个和你抽到同一批题的 Ghost。它按自己的习惯使用这点电。
           </p>
@@ -58,6 +59,7 @@ export default function StartScreen({
             <span>◇ 每局 {MIN_ROUNDS}–{MAX_ROUNDS} 步</span>
             <span>◈ 题库 {QUESTIONS.length} 道 · 每次随机抽</span>
           </div>
+          <aside className="how-to"><h2>玩法说明</h2><p><b>01</b> 三选一策略出发。<b>02</b> 每步四选一，先选中再确认。<b>03</b> 结算对照 Ghost，看看电量换来了什么。</p><small>阅读不计时 · 数字键选项 / Enter 确认 · 所有数值均为模拟</small></aside>
         </div>
         <div
           className="mirror-art"
@@ -109,7 +111,7 @@ export default function StartScreen({
               </li>
             ))}
           </ul></details>
-          <small>它和你共享题目与赌运，各自使用自己的天赋。Ghost 不是最优解。</small>
+          <small>它和你共享题目、时间表与赌运，各自使用自己的策略。Ghost 不是最优解。</small>
         </div>
 
         <div className="demo-intro">
@@ -117,7 +119,7 @@ export default function StartScreen({
           <h2>也可以，从同一个起点试试。</h2>
           <p className="muted">
             固定环境与题目，方便演示和比较。开局还会随机给 {TALENTS.length}{" "}
-            个天赋中的三个，由你选一个。
+            个策略中的三个，由你选一个。
           </p>
           <button className="demo-button" onClick={() => onBegin("A")}>
             <span>
@@ -135,7 +137,7 @@ export default function StartScreen({
           </button>
           {profile.completed.length > 0 && (
             <p className="muted small-note">
-              已体验 {profile.completed.length} 个世界，历史最高模拟存活概率{" "}
+              已体验 {profile.completed.length} 个世界，跨版本历史最高模拟存活概率{" "}
               {(profile.best * 100).toFixed(1)}%。
             </p>
           )}

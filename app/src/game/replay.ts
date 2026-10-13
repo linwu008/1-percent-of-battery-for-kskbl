@@ -16,7 +16,7 @@ export function createSession(
     world,
     ghostPersona: world.ghostPersona,
     practice,
-    // 天赋还没选，开局由玩家三选一后写入 player.talent
+    // 行动策略还没选，开局由玩家三选一后写入 player.talent
     player: initialActor(null),
     ghost: ghostUpTo(world, 0, world.ghostPersona, world.ghostTalent),
     step: 0,
@@ -32,15 +32,15 @@ export function roundsOf(s: Session): number {
 }
 
 export function pickTalent(s: Session, talentId: string): Session {
-  if (!s.world.talentChoices.includes(talentId)) throw new Error("本局没有这个天赋");
-  if (!TALENT_BY_ID[talentId]) throw new Error("未知天赋");
-  if (s.step > 0 || s.player.talent) throw new Error("本局已经选过天赋");
+  if (!s.world.talentChoices.includes(talentId)) throw new Error("本局没有这个策略");
+  if (!TALENT_BY_ID[talentId]) throw new Error("未知策略");
+  if (s.step > 0 || s.player.talent) throw new Error("本局已经选过策略");
   return { ...s, player: { ...s.player, talent: talentId } };
 }
 
 export function step(s: Session, optionIndex: number): Session {
   if (s.ending) throw new Error("本局已结束");
-  if (!s.player.talent) throw new Error("还没有选择天赋");
+  if (!s.player.talent) throw new Error("还没有选择策略");
   const questionId = s.world.questions[s.step];
   if (!questionId) throw new Error("本局已答完");
   const q = QUESTION_BY_ID[questionId];

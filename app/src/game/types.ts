@@ -69,6 +69,8 @@ export interface EnvRule {
   in: string[];
   points: number;
   note: string;
+  /** 条件导致行动没有生效时，禁止策略加成把失败恢复为成果。 */
+  blocksGain?: boolean;
 }
 
 export interface Option {
@@ -105,7 +107,7 @@ export interface Talent {
   discount?: { tags: Tag[]; rate: number };
   boost?: { outcomes: OutcomeId[]; points: number };
   shield?: { key: keyof Env; in: string[]; rate: number };
-  /** 某些标签的选项不但不耗电，还回一点电。 */
+  /** 对匹配标签的行动抵扣成本，最低为零，不给电池充电。 */
   refund?: { tags: Tag[]; amount: number };
 }
 
@@ -145,7 +147,7 @@ export interface AnswerLog {
   label: string;
   /** 这一下动作本身耗掉的电 */
   cost: number;
-  /** 这 15 分钟里自然损耗掉的电（不操作也掉） */
+  /** 本步实际时长内的自然损耗（不操作也掉） */
   idleDrain: number;
   /** 做完这一步时已经过去多少分钟 */
   minutes: number;

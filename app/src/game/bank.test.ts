@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MAX_ROUNDS, OUTCOME_THRESHOLD } from "./config";
 import { QUESTIONS, questionsByStage } from "./content/questions";
 import { TALENTS } from "./content/talents";
-import type { Env, OutcomeId, Tag } from "./types";
+import { visibleIndexes } from "./engine";
+import type { Env, OutcomeId, Tag, World } from "./types";
 
 const STAGES = ["early", "mid", "late"] as const;
 
@@ -32,6 +33,47 @@ const ENV_VALUES = {
 const OUTCOMES = Object.keys(OUTCOME_THRESHOLD) as OutcomeId[];
 
 describe("题库体检", () => {
+  it("全部环境组合中每题恰好有四个可见选项，且始终保留免费选择", () => {
+    let environments: Partial<Env>[] = [{}];
+    for (const [key, values] of Object.entries(ENV_VALUES)) {
+      environments = environments.flatMap((env) =>
+        values.map((value) => ({ ...env, [key]: value })),
+      );
+    }
+    const bad = new Set<string>();
+    for (const env of environments) {
+      const world = { env } as World;
+      for (const q of QUESTIONS) {
+        const visible = visibleIndexes(world, q).map((i) => q.options[i]);
+        if (visible.length !== 4) bad.add(`${q.id}: ${visible.length} 个可见选项`);
+        if (!visible.some((o) => o.cost === 0)) bad.add(`${q.id}: 没有免费选项`);
+        if (new Set(visible.map((o) => o.label)).size !== visible.length)
+          bad.add(`${q.id}: 选项文案重复`);
+      }
+    }
+    expect(environments).toHaveLength(4608);
+    expect([...bad]).toEqual([]);
+  });
+
+  it("第四选项按题目单独写作，有实际收益且不照搬已有动作", () => {
+    const labels = new Set<string>();
+    for (const q of QUESTIONS.filter((q) => q.id !== "l40")) {
+      const fourth = q.options[3];
+      expect(fourth, q.id).toBeDefined();
+      if (!fourth) continue;
+      expect(fourth.gain || fourth.gamble, q.id).toBeDefined();
+      expect(fourth.detail.length, q.id).toBeGreaterThan(15);
+      expect(q.options.slice(0, 3).some((o) =>
+        o.cost === fourth.cost &&
+        JSON.stringify(o.gain) === JSON.stringify(fourth.gain) &&
+        JSON.stringify(o.gamble) === JSON.stringify(fourth.gamble) &&
+        JSON.stringify(o.env) === JSON.stringify(fourth.env),
+      ), `${q.id}: 新选项只有换皮`).toBe(false);
+      labels.add(fourth.label);
+    }
+    expect(labels.size).toBe(129);
+  });
+
   it("规模足够大，两局很难撞题", () => {
     expect(QUESTIONS.length).toBeGreaterThanOrEqual(120);
     // 一局最多 12 题、三阶段各占约三成，每个阶段至少要撑得起 12 题的抽题
@@ -44,13 +86,13 @@ describe("题库体检", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("每题都有至少两条题干变体、三个选项、一个不花钱的选择", () => {
+  it("每题都有至少两条题干变体、四个选项、一个不花钱的选择", () => {
     // 一次性汇总，避免每次只报出第一个坏题
     const bad: string[] = [];
     for (const q of QUESTIONS) {
       if (q.prompt.length < 2) bad.push(`${q.id} 题干变体不足`);
       if (!q.prompt.every((p) => p.length > 8)) bad.push(`${q.id} 题干过短`);
-      if (q.options.length < 3) bad.push(`${q.id} 选项不足三个`);
+      if (q.options.length < 4) bad.push(`${q.id} 选项不足四个`);
       if (!q.options.some((o) => o.cost === 0)) bad.push(`${q.id} 没有免费选项`);
       if (!q.options.some((o) => o.gain || o.gamble))
         bad.push(`${q.id} 没有任何收益`);

@@ -3,12 +3,14 @@ import {
   OUTCOME_WEIGHTS,
   QUESTION_WEIGHT,
   SURVIVAL,
+  STEP_MINUTES,
   TIER_WEIGHT,
   scoreOf,
   survivalFrom,
   type SurvivalBreakdown,
 } from "./config";
 import type { Actor, AnswerLog, Env, OutcomeId, WeightTier } from "./types";
+import { elapsedMinutes } from "./timeline";
 
 export const OUTCOME_IDS = Object.keys(OUTCOME_WEIGHTS) as OutcomeId[];
 
@@ -75,7 +77,7 @@ export function logContribution(log: AnswerLog): number {
 export function survivalOf(a: Actor, env: Env): SurvivalBreakdown {
   const c = contributions(a);
   const remaining = a.energy / FULL_ENERGY;
-  return survivalFrom(c.found, c.rescue, remaining, a.answers.length, env);
+  return survivalFrom(c.found, c.rescue, remaining, elapsedMinutes(a) / STEP_MINUTES, env);
 }
 
 /** 每一步结束时的存活概率，首尾都算上，用来画曲线。 */
@@ -96,7 +98,7 @@ export function summarize(a: Actor) {
     efficiency: cost > 0 ? Math.round((value / (cost * 10)) * 100) / 100 : null,
     spent: a.answers.reduce((s, l) => s + l.cost, 0),
     idle: a.answers.reduce((s, l) => s + l.idleDrain, 0),
-    minutes: a.answers.length ? a.answers[a.answers.length - 1].minutes : 0,
+    minutes: elapsedMinutes(a),
     gambles: a.answers.reduce((s, l) => s + l.gambled.length, 0),
     gamblesWon: a.answers.reduce(
       (s, l) => s + l.gambled.filter((g) => g.won).length,

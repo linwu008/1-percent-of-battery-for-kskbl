@@ -3,7 +3,6 @@ import {
   OUTCOME_THRESHOLD,
   OUTCOME_WEIGHTS,
   OUTCOME_LABELS,
-  STEP_MINUTES,
   costFactor,
   defaultTier,
   idleDrain,
@@ -12,6 +11,7 @@ import { TALENT_BY_ID } from "./content/talents";
 import { QUESTION_BY_ID } from "./content/questions";
 import { gambleRoll } from "./rng";
 import { survivalOf } from "./scoring";
+import { elapsedMinutes, stepDuration } from "./timeline";
 import type {
   Actor,
   AnswerLog,
@@ -92,16 +92,18 @@ export function costOf(opt: Option, env: Env, talentId: string | null): number {
 }
 
 /** 环境修正：同一选项在不同局里值不值，答案不一样。 */
-function envDelta(opt: Option, env: Env): { points: number; notes: string[] } {
-  if (!opt.env) return { points: 0, notes: [] };
+function envDelta(opt: Option, env: Env): { points: number; notes: string[]; blocked: boolean } {
+  if (!opt.env) return { points: 0, notes: [], blocked: false };
   let points = 0;
+  let blocked = false;
   const notes: string[] = [];
   for (const rule of opt.env)
     if (rule.in.includes(String(env[rule.key]))) {
       points += rule.points;
       notes.push(rule.note);
+      blocked ||= rule.blocksGain === true;
     }
-  return { points, notes };
+  return { points, notes, blocked };
 }
 
 export interface Preview {
@@ -125,10 +127,10 @@ export function preview(
 ): Preview {
   const opt = q.options[index];
   const cost = costOf(opt, w.env, a.talent);
-  const idle = idleDrain(w.env);
+  const idle = Math.min(idleDrain(w.env, stepDuration(w, a.answers.length)), Math.max(0, a.energy - cost));
   const delta = envDelta(opt, w.env);
   const talent = a.talent ? TALENT_BY_ID[a.talent] : undefined;
-  let gain = opt.gain
+  let gain = opt.gain && !delta.blocked
     ? {
         outcome: opt.gain.outcome,
         points:
@@ -140,7 +142,7 @@ export function preview(
       }
     : null;
   if (gain && gain.points <= 0) gain = null;
-  const gamble = opt.gamble
+  const gamble = opt.gamble && !delta.blocked
     ? {
         outcome: opt.gamble.outcome,
         points: Math.max(
@@ -156,7 +158,7 @@ export function preview(
       }
     : null;
   // 能否做，只看动作本身买不买得起。
-  // 那 15 分钟的自然损耗无论如何都会发生，买不起就少扣点、扣到 0 为止——
+  // 这一步的自然损耗无论如何都会发生，买不起就少扣点、扣到 0 为止——
   // 这样电量见底时「不耗电」的选项仍然选得动，玩家不会被卡死在半路。
   const affordable = a.energy >= cost;
   return {
@@ -181,13 +183,14 @@ function applyGain(a: Actor, outcome: OutcomeId, points: number): boolean {
 
 /**
  * 收尾：记录这一步过去的时间、扣掉自然损耗，并算出这一步结束时的存活概率。
- * 不耗电的等待也算 15 分钟，也要付自然损耗——电池不等人。
+ * 不耗电的等待同样推进本步时间，也要付自然损耗——电池不等人。
  */
 function settle(w: World, a: Actor, log: Omit<AnswerLog, "minutes" | "idleDrain" | "survival">): Actor {
   const next: Actor = structuredClone(a);
-  const idle = Math.min(idleDrain(w.env), next.energy);
+  const duration = stepDuration(w, a.answers.length);
+  const idle = Math.min(idleDrain(w.env, duration), next.energy);
   next.energy = Math.max(0, next.energy - idle);
-  const minutes = (a.answers.length + 1) * STEP_MINUTES;
+  const minutes = elapsedMinutes(a) + duration;
   next.answers.push({
     ...log,
     idleDrain: idle,
@@ -235,7 +238,7 @@ export function answer(
     } else texts.push("这一下没有换来结果");
     gambled.push({ outcome: p.gamble.outcome, points: p.gamble.points, won });
   }
-  if (!p.gain && !p.gamble) texts.push("什么也没做，时间照样过去");
+  if (!p.gain && !p.gamble) texts.push("这次行动没有形成新的成果");
 
   return settle(w, next, {
     questionId,
@@ -251,7 +254,7 @@ export function answer(
   });
 }
 
-/** 什么也不做：也过 15 分钟，也掉自然损耗，但没有成果。 */
+/** 什么也不做：同样推进本步时间并扣自然损耗，但没有成果。 */
 export function pass(w: World, a: Actor, questionId: string): Actor {
   const q = QUESTION_BY_ID[questionId];
   if (!q) throw new Error("未知题目");

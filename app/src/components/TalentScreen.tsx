@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TALENT_BY_ID } from "../game/content/talents";
 import { PERSONA_BY_ID } from "../game/content/personas";
 import { backdrop } from "../game/content/backdrop";
-import { MIN_ROUNDS, MAX_ROUNDS, STEP_MINUTES, idleDrain } from "../game/config";
+import { MIN_ROUNDS, MAX_ROUNDS } from "../game/config";
 import { envSummary } from "../game/world";
 import { useTypewriterAll } from "./useTypewriter";
 import type { Session } from "../game/types";
@@ -28,7 +28,10 @@ export default function TalentScreen({
     s.world.env,
   ]);
   const typed = useTypewriterAll(lines, 30, instant);
-  const idle = idleDrain(s.world.env);
+  const [selected, setSelected] = useState<string | null>(null);
+  const strategy = selected ? TALENT_BY_ID[selected] : null;
+  const ghostStrategy = TALENT_BY_ID[s.world.ghostTalent];
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, []);
 
   return (
     <main className="talent-screen">
@@ -38,8 +41,25 @@ export default function TalentScreen({
           <span className="seed">#{s.world.seed}</span>
         </span>
         <h1>醒来以后，<span className="mint">还剩 1%。</span></h1>
-        <p className="muted">先看清处境，再决定你要带着什么习惯出发。</p>
+        <p className="muted">先看清处境，再决定你要用什么策略出发。</p>
       </div>
+
+      <section className="talent-pick">
+        <div className="strategy-heading"><span className="eyebrow">SELECT YOUR PROTOCOL</span><h2>请选择策略</h2><p>先选名称查看作用，确认后本局生效。</p></div>
+        <div className="talent-cards">
+          {s.world.talentChoices.map((id) => {
+            const t = TALENT_BY_ID[id];
+            if (!t) return null;
+            return (
+              <button key={id} className={`talent-card ${selected === id ? 'selected' : ''}`} aria-pressed={selected === id} onClick={() => setSelected(id)}>
+                <span className="talent-name">{t.name}</span>
+                <span className="strategy-mark" aria-hidden="true">{selected === id ? '✓' : '+'}</span>
+              </button>
+            );
+          })}
+        </div>
+        {strategy && <div className="strategy-detail" key={selected} aria-live="polite"><div><span className="eyebrow">STRATEGY EFFECT / 策略作用</span><h3>{strategy.name}</h3><p>{strategy.note}</p></div><button className="primary" onClick={() => onPick(strategy.id)}>确认选择</button></div>}
+      </section>
 
       <section
         className="panel backdrop-card"
@@ -69,8 +89,7 @@ export default function TalentScreen({
         )}
         {typed.done && (
           <p className="backdrop-rule">
-            每一个决定推进 {STEP_MINUTES} 分钟。就算你什么都不做，这 {STEP_MINUTES}{" "}
-            分钟里电池也会自己掉 {idle} 格（本局环境温度下）；一共有 {MIN_ROUNDS}~
+            每一个决定推进 25–35 分钟，时钟会在剧情框里向前走。电池自然损耗随时长和环境变化；一共有 {MIN_ROUNDS}~
             {MAX_ROUNDS} 步，具体几步，你事先不会知道。
           </p>
         )}
@@ -101,30 +120,14 @@ export default function TalentScreen({
           </div>
           <h2>{persona?.name ?? "另一个你"}</h2>
           <p>{persona?.note}</p>
+          <p className="ghost-strategy" data-testid="ghost-strategy">自动选择策略 · <b>{ghostStrategy?.name}</b><small>{ghostStrategy?.note}</small></p>
           <small className="muted">
-            它和你抽到同一批题，赌运也一样。差别只来自性格决定的花法。
+            它和你抽到同一批题，赌运也一样；行动习惯与各自策略带来不同结果。
           </small>
         </section>
       </div>
 
-      <section className="talent-pick">
-        <div className="choice-heading">
-          开局天赋 · 三选一 <span>本局只给这三个，选了就不能改</span>
-        </div>
-        <div className="talent-cards">
-          {s.world.talentChoices.map((id) => {
-            const t = TALENT_BY_ID[id];
-            if (!t) return null;
-            return (
-              <button key={id} className="talent-card" onClick={() => onPick(id)}>
-                <span className="talent-name">{t.name}</span>
-                <span className="talent-note">{t.note}</span>
-                <span className="talent-go">用这个开局 ↗</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+
     </main>
   );
 }

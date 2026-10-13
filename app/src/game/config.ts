@@ -1,12 +1,12 @@
 import type { Env, Tag, WeightTier } from "./types";
 
-export const RULE_VERSION = "0.4.0";
+export const RULE_VERSION = "0.6.0";
 
 /** 电量内部以 0.001% 记账。满值 1000 即屏幕上的 1.000%。 */
 export const FULL_ENERGY = 1000;
 
-/** 每一个步骤固定推进 15 分钟。阅读与思考不推进时间。 */
-export const STEP_MINUTES = 15;
+/** 自然损耗与时间处罚的计量基准。实际每步由时间表抽取25/30/35分钟。 */
+export const STEP_MINUTES = 30;
 
 /** 一局抽 8~12 道题，具体几道是世界的一部分，玩家不知道。 */
 export const MIN_ROUNDS = 8;
@@ -96,7 +96,7 @@ export function defaultTier(cost: number, hasGain: boolean): WeightTier {
 
 /* ───────────────────── 自然损耗与环境耦合 ───────────────────── */
 
-/** 每 15 分钟的基础自然损耗（0.001% 为单位）。不操作也在掉。 */
+/** 每30分钟的基础自然损耗（0.001%为单位），保留旧版典型每步预算。 */
 export const IDLE_DRAIN_BASE = 14;
 
 /** 温度影响电池：炎热与严寒都更费电。 */
@@ -115,9 +115,9 @@ export const IDLE_NETWORK: Record<string, number> = {
   local: 1.0,
 };
 
-export function idleDrain(env: Env): number {
+export function idleDrain(env: Env, minutes = STEP_MINUTES): number {
   return Math.round(
-    IDLE_DRAIN_BASE * (IDLE_TEMP[env.temp] ?? 1) * (IDLE_NETWORK[env.network] ?? 1),
+    IDLE_DRAIN_BASE * (IDLE_TEMP[env.temp] ?? 1) * (IDLE_NETWORK[env.network] ?? 1) * (minutes / STEP_MINUTES),
   );
 }
 
@@ -166,7 +166,7 @@ export const SURVIVAL = {
   rescueSpan: 0.85,
   endureBase: 0.78,
   endureSpan: 0.42,
-  /** 每多推进 15 分钟，撑到救援的概率掉一点 */
+  /** 每多推进30分钟，撑到救援的概率掉一点 */
   timeStepPenalty: 0.009,
   injuryPenalty: { none: 0, scratch: 0.018, fracture: 0.05, bleeding: 0.1 },
   tempPenalty: { cool: 0, sultry: 0.012, hot: 0.035, freezing: 0.055 },
@@ -239,7 +239,7 @@ export interface SurvivalBreakdown {
 
 /**
  * 三段相乘的存活概率。contrib 是「成果 → 加权贡献分」的映射，
- * 由 scoring.ts 从每一步的选择算出来；steps 是已推进的步数。
+ * 由 scoring.ts 从每一步的选择算出来；steps是累计分钟数/30的等效步数。
  */
 export function survivalFrom(
   contribFound: number,

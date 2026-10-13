@@ -16,8 +16,10 @@ import StartScreen from "./components/StartScreen";
 import TalentScreen from "./components/TalentScreen";
 import EventScreen from "./components/EventScreen";
 import ResultsScreen from "./components/ResultsScreen";
+import EntryScreen from "./components/EntryScreen";
 
 export default function App() {
+  const [entered, setEntered] = useState(false);
   const [loaded] = useState(loadSession);
   const [session, setSession] = useState<Session | null>(loaded.session);
   const [profile, setProfile] = useState<Profile>(loadProfile);
@@ -32,6 +34,10 @@ export default function App() {
     try { localStorage.setItem("one-percent-instant-text", String(!value)); } catch { /* 本次会话仍可切换 */ }
     return !value;
   });
+
+  useEffect(() => {
+    if (entered && home) window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [entered, home]);
 
   const exportRecovery = () => {
     if (!loaded.recovery) return;
@@ -136,6 +142,8 @@ export default function App() {
     }
   };
 
+  if (!entered) return <EntryScreen onEnter={() => { setEntered(true); setHome(true); }} />;
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -150,7 +158,7 @@ export default function App() {
         </button>
         <div className="header-meta">
           <span className="live-dot" />
-          资源决策模拟器 <span className="version">v0.5.0</span>
+          资源决策模拟器 <span className="version">v0.6.0</span>
         </div>
       </header>
       {loaded.recovery && (
@@ -182,6 +190,7 @@ export default function App() {
           profile={profile}
           onNew={() => begin()}
           onReplay={replay}
+          onHome={() => setHome(true)}
         />
       ) : (
         <EventScreen

@@ -4,7 +4,6 @@ import {
   MAX_ROUNDS,
   MIN_ROUNDS,
   QUESTION_WEIGHT,
-  STEP_MINUTES,
   SURVIVAL,
   TIER_WEIGHT,
   idleDrain,
@@ -33,6 +32,7 @@ import {
 } from "./replay";
 import { compare, summarize, survivalOf } from "./scoring";
 import { createWorld } from "./world";
+import { stepDuration } from "./timeline";
 import type { Session, World } from "./types";
 
 /**
@@ -213,7 +213,7 @@ describe("一局流程", () => {
   it("选天赋之后才能开始答题", () => {
     const w = createWorld("flow");
     const s = createSession(w);
-    expect(() => step(s, 0)).toThrow("还没有选择天赋");
+    expect(() => step(s, 0)).toThrow("还没有选择策略");
     expect(() => pickTalent(s, "不存在的天赋")).toThrow();
   });
   it("答完全部题目即结束，过程中 Ghost 只同步到前一题", () => {
@@ -323,7 +323,7 @@ describe("评分", () => {
     const w = createWorld("turtle");
     let s = pickTalent(createSession(w), w.talentChoices[0]);
     while (!isDone(s)) s = step(s, PASS_INDEX);
-    // 不操作不等于不耗电：每一步 15 分钟，电池自己往下掉
+    // 不操作不等于不耗电：每一步推进时间，电池自己往下掉
     expect(s.player.energy).toBeLessThan(FULL_ENERGY);
     expect(s.player.energy).toBeGreaterThan(0);
     expect(s.player.answers.every((a) => a.idleDrain > 0)).toBe(true);
@@ -332,14 +332,17 @@ describe("评分", () => {
 });
 
 describe("v0.3.0：自然损耗、环境耦合与时间", () => {
-  it("每步固定 15 分钟，且自然损耗一定发生", () => {
+  it("每步按种子推进约30分钟，且自然损耗一定发生", () => {
     const w = createWorld("idle1");
     let s = pickTalent(createSession(w), w.talentChoices[0]);
     while (!isDone(s)) s = step(s, PASS_INDEX);
-    expect(s.player.answers.at(-1)?.minutes).toBe(w.rounds * STEP_MINUTES);
-    const perStep = new Set(s.player.answers.map((a) => a.idleDrain));
-    expect(perStep.size).toBe(1);
-    expect([...perStep][0]).toBe(idleDrain(w.env));
+    let minutes = 0;
+    s.player.answers.forEach((a, i) => {
+      const duration = stepDuration(w, i);
+      minutes += duration;
+      expect(a.minutes).toBe(minutes);
+      expect(a.idleDrain).toBe(idleDrain(w.env, duration));
+    });
   });
 
   it("炎热与严寒都比阴凉掉得快", () => {

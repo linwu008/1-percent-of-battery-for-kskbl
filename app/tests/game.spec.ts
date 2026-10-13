@@ -1,5 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
 
+async function enter(page: Page) {
+  await page.getByRole('button', { name: '进入模拟器' }).click();
+}
+async function chooseStrategy(page: Page) {
+  await page.locator('.talent-card').first().click();
+  await page.getByRole('button', { name: '确认选择', exact: true }).click();
+}
+
 /** 一直点第一个买得起的选项，直到本局结束。题数 8~12，给足余量。 */
 async function answerAll(page: Page, rounds = 12) {
   for (let i = 0; i < rounds; i++) {
@@ -14,6 +22,7 @@ async function answerAll(page: Page, rounds = 12) {
 
 async function startRun(page: Page, preset: "A" | "B") {
   await page.goto("/");
+  await enter(page);
   const demo = page.getByRole("button", {
     name: preset === "A" ? /案例 A/ : /案例 B/,
   });
@@ -23,7 +32,7 @@ async function startRun(page: Page, preset: "A" | "B") {
   await demo.click();
   // 开局先看清世界，再三选一天赋
   await expect(page.getByText("这一局的世界")).toBeVisible();
-  await page.locator(".talent-card").first().click();
+  await chooseStrategy(page);
   await expect(page.locator(".event-panel")).toBeVisible();
 }
 
@@ -60,7 +69,7 @@ test("完整一局：看清处境 → 选天赋 → 答完 → 结算 → 导出
   // 同一局再试：同一个种子，重新开始
   await page.getByRole("button", { name: "同一局再试" }).click();
   await expect(page.getByText("这一局的世界")).toBeVisible();
-  await page.locator(".talent-card").first().click();
+  await chooseStrategy(page);
   expect(await page.locator(".seed").first().textContent()).toBe(seedBefore);
   expect(errors).toEqual([]);
 });
@@ -103,13 +112,14 @@ test("每一题都给出标价，且明确写出做完会剩多少", async ({ pa
 
 test("开局先把处境讲清楚，玩家才看得懂题", async ({ page }) => {
   await page.goto("/");
+  await enter(page);
   await page.getByRole("button", { name: /案例 A/ }).click();
   const card = page.locator(".backdrop-card");
   await expect(card).toBeVisible();
   const skip = page.getByRole("button", { name: /跳过这段/ });
   if (await skip.isVisible()) await skip.click();
   await expect(card).toContainText("还剩 1.000%");
-  await expect(card).toContainText("15 分钟");
+  await expect(card).toContainText("25–35 分钟");
 });
 
 test("中途可以放弃这一局，再重开一局", async ({ page }) => {
@@ -147,7 +157,7 @@ test("鼠标选择不提交，情报记录不耗电，刷新恢复同一步", as
   await expect(page.getByTestId("battery")).toContainText("1.000%");
   await page.getByRole("button", { name: "已知信息", exact: true }).click();
   await expect(page.getByTestId("intel-panel")).toContainText("局部可用");
-  await expect(page.getByTestId("confirm-action")).toBeDisabled();
+  await expect(page.getByTestId("confirm-action")).toHaveCount(0);
   await page.getByRole("button", { name: "行动记录", exact: true }).click();
   await expect(page.getByTestId("log-panel")).toContainText("还没有行动记录");
   await page.getByRole("button", { name: "行动", exact: true }).click();
@@ -155,9 +165,11 @@ test("鼠标选择不提交，情报记录不耗电，刷新恢复同一步", as
   await expect(page.getByTestId("step-label")).toContainText("第 2 步");
   const battery = await page.getByTestId("battery").textContent();
   await page.reload();
+  await enter(page);
+  await page.getByRole('button', { name: /继续上次记录/ }).click();
   await expect(page.getByTestId("step-label")).toContainText("第 2 步");
   await expect(page.getByTestId("battery")).toHaveText(battery!);
-  await expect(page.getByTestId("confirm-action")).toBeDisabled();
+  await expect(page.getByTestId("confirm-action")).toHaveCount(0);
   await page.getByRole("button", { name: "行动记录", exact: true }).click();
   await expect(page.locator(".log-list li")).toHaveCount(1);
 });
@@ -173,6 +185,8 @@ test("减少动效与立即显示都保留完整剧情，关闭设置后下一�
   await page.getByTestId("confirm-action").click();
   await expect(page.locator(".event-story")).not.toHaveClass(/typing/);
   await page.reload();
+  await enter(page);
+  await page.getByRole('button', { name: /继续上次记录/ }).click();
   await expect(page.getByRole("button", { name: "恢复逐字剧情" })).toBeVisible();
   await page.getByRole("button", { name: "恢复逐字剧情" }).click();
   await page.locator(".event-story").click();
@@ -243,6 +257,7 @@ test("不兼容的旧记录被保留并可下载", async ({ page }) => {
 test("窄屏下没有横向滚动", async ({ page }) => {
   await page.goto("/");
   await page.setViewportSize({ width: 390, height: 844 });
+  await enter(page);
   await page.getByRole("button", { name: /案例 A/ }).click();
   await expect(page.locator(".talent-card").first()).toBeVisible();
   expect(
@@ -250,7 +265,7 @@ test("窄屏下没有横向滚动", async ({ page }) => {
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
   ).toBe(true);
-  await page.locator(".talent-card").first().click();
+  await chooseStrategy(page);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -303,6 +318,7 @@ test("低高度桌面仍能读到完整选项，底栏不覆盖内容", async ({
     const dock = (await page.locator(".decision-dock").boundingBox())!;
     expect(choices.height).toBeGreaterThanOrEqual(option.height);
     expect(choices.y + choices.height).toBeLessThanOrEqual(dock.y);
+    await page.keyboard.press('Escape');
     await page.getByTestId("option-0").click();
     await expect(page.getByTestId("option-0")).toHaveAttribute("aria-pressed", "true");
   }
@@ -343,7 +359,7 @@ test("行动记录的余量包含自然损耗，与当时状态栏一致", async
   await startRun(page, "A");
   await page.getByTestId("option-0").click();
   await page.getByTestId("confirm-action").click();
-  await expect(page.getByTestId("battery")).toContainText("0.752%");
+  const remaining = (await page.getByTestId('battery').innerText()).split(' / ')[0].trim();
   await page.getByRole("button", { name: "行动记录", exact:true }).click();
-  await expect(page.locator(".log-list")).toContainText("行动后余量 0.752%");
+  await expect(page.locator(".log-list")).toContainText(`行动后余量 ${remaining}`);
 });
