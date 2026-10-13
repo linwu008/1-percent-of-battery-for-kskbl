@@ -12,4 +12,5 @@ app/test-results/
 app/playwright-report/
 *.tsbuildinfo
 app/.cache/
+app/.demo-work/
 trash/
