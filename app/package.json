@@ -1,6 +1,6 @@
 {
   "name": "one-percent-battery",
-  "version": "0.7.0",
+  "version": "1.1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "build:offline": "node scripts/build-offline.mjs",
+    "build:desktop": "node scripts/build-desktop.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -20,6 +22,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "archiver": "^8.0.0",
+    "electron": "44.7.0",
     "prettier": "^3.9.10",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

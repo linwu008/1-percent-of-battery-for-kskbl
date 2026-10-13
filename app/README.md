@@ -1,4 +1,4 @@
-# 1% Battery · v1.0.0
+# 1% Battery · v1.1.2
 
 灾后资源决策模拟器：在最后 **1.000%** 电量内做出选择，与采用日常行为习惯的 Ghost 对照资源消耗和模拟结果。Ghost 不是最优解，也不保证玩家获胜。
 
@@ -9,7 +9,9 @@
 
 ## 本版变化
 
-**v1.0.0（本版）**：补全交付文档与界面素材，并修掉一条在慢机器上会超时的平衡性测试。
+**v1.1.2（本版）**：增加离线下载、变量目录、主页入口动效和结算逐项推导，规则数值不变。
+
+**v1.0.0（基线）**：补全交付文档与界面素材，并修掉一条在慢机器上会超时的平衡性测试。
 **游戏规则与界面和 v0.7.0 完全一致，未改动任何玩法数值。**
 
 v0.7.0 的界面改动：
@@ -38,12 +40,12 @@ npm run build
 
 浏览器打开 Vite 输出的地址。应用完全在浏览器内运行；依赖首次安装需要网络。浏览器测试默认使用Edge；若改用Chromium，先安装Playwright Chromium并设置`PLAYWRIGHT_CHANNEL=chromium`。
 
-当前 v1.0.0 的验证结果：单元与规则测试 **81 项通过**，浏览器验收 **27 项通过**
+v1.0.0 基线的验证结果：单元与规则测试 **81 项通过**，浏览器验收 **27 项通过**
 （其中 `tests/shots.spec.ts` 会在测试过程中刷新 `assets/screens/` 的界面截图），
 `tsc -b` 与生产构建通过。规则层测试跑 `npm test` 即可，其中事后最优参考线那一条
 需要 40 个种子 × beam 搜索，已单独放宽超时（慢机器上约 7 秒），不要靠调小种子数让它"变快"。
 
-本版预览与交付状态见 [交付说明](../content/1013_v10交付说明_v1.md)。历史独立地址保持不动：
+v1.0.0 基线的交付状态见 [交付说明](../content/1013_v10交付说明_v1.md)。v1.1.2 下载见仓库首页。历史独立地址保持不动：
 - v0.7：https://one-percent-battery-v07.app.workbuddy.host/ （v1.0.0 沿用它，内容一致）
 - v0.4：https://one-percent-battery-v4.app.workbuddy.host/
 - v0.3：https://one-percent-battery-v3.app.workbuddy.host/
@@ -97,3 +99,24 @@ npm run build
 ### v0.6 审查补充
 
 环境明确阻止新增行动生效时，`EnvRule.blocksGain`禁止策略加成恢复成果；行动成本仍支付。旧版环境修正保持原有口径。历史最佳值保留，并标明跨版本，不能作为同规则进步幅度。审查修复与测试证据见交付说明。
+
+
+## v1.1.2 离线构建
+
+应用版本为 1.1.2，规则版本仍为 0.6.0。
+
+- npm ci：安装开发依赖。
+- npm run build：生产网页构建。
+- npm run build:offline：生成 release/ 下的单文件 HTML，包含全部字体和脚本。
+- npm run build:desktop：在 Windows x64 上打包当前已生成的 HTML，生成解压即用的 ZIP。运行时来自锁定的 Electron 开发依赖。
+- npm test / npm run test:browser：规则及浏览器回归。
+- node --test scripts/release-integrity.test.mjs：检查源码变化、错误校验文件与旧运行时不会混入发布。
+- npx playwright test --config=playwright.offline.config.ts：验收两个版本的 HTML 与 Windows EXE，需先构建对应产物。
+
+基线包：从 a5494ca57d73b00fe7029cccc8c62deda2f909b4 提取 app 源码至项目内临时目录，以 node scripts/build-offline.mjs <基线app目录> 1.0.0 构建，再运行 node scripts/build-desktop.mjs 1.0.0。只修正交付副本的旧版本标识，不改原版玩法。
+
+Windows 包每次使用全新暂存目录构建，测试从最终 ZIP 解压启动；不会复用旧程序目录或带入个人存档。
+
+发布前先提交并推送源码，再构建离线成品。每份成品附 .sha256 校验文件与 .build.json 构建清单，记录源提交、源码摘要、打包脚本摘要及文件哈希。
+
+发布脚本 scripts/publish-release.mjs 使用系统已配置的 GitHub 凭据，只操作本项目的 v1.1.2 Release；先确认远端源码与本地提交一致，核对四份成品与对应版本源码及校验文件，再上传并实际下载核对 SHA-256。禁止把凭据写进仓库。

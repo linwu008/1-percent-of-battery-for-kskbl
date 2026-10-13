@@ -6,6 +6,7 @@ interface Props {
   hasSession: boolean;
   onBegin: (preset?: "A" | "B") => void;
   onContinue: () => void;
+  onCatalog: () => void;
 }
 
 export default function StartScreen({
@@ -13,6 +14,7 @@ export default function StartScreen({
   hasSession,
   onBegin,
   onContinue,
+  onCatalog,
 }: Props) {
   return (
     <main className="start-screen">
@@ -35,12 +37,13 @@ export default function StartScreen({
             <br />
             屏幕上写着：1%。
           </p>
-          <div className="hero-actions">
-            <button className="primary" onClick={() => onBegin()}>
-              开始一段人生 <span>↗</span>
+          <div className="hero-actions catalog-actions">
+            <button className="primary protocol-action" onClick={() => onBegin()}>
+              开启一段人生 <span className="action-arrow">↗</span>
             </button>
+            <button className="protocol-action catalog-action" onClick={onCatalog}>变量目录 <span className="action-arrow">↗</span></button>
             {hasSession && (
-              <button className="text-button" onClick={onContinue}>
+              <button className="text-button continue-action" onClick={onContinue}>
                 继续上次记录 →
               </button>
             )}

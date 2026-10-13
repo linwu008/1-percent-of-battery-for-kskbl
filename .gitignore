@@ -13,3 +13,5 @@ app/playwright-report/
 *.tsbuildinfo
 app/.cache/
 trash/
+
+app/release/

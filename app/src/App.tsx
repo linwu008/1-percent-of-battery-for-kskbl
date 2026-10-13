@@ -18,9 +18,11 @@ import EventScreen from "./components/EventScreen";
 import ResultsScreen from "./components/ResultsScreen";
 import EntryScreen from "./components/EntryScreen";
 import IntroScreen from "./components/IntroScreen";
+import CatalogScreen from "./components/CatalogScreen";
 
 export default function App() {
   const [entered, setEntered] = useState(false);
+  const [catalog, setCatalog] = useState(false);
   const [introSeen, setIntroSeen] = useState(false);
   const [loaded] = useState(loadSession);
   const [session, setSession] = useState<Session | null>(loaded.session);
@@ -153,7 +155,7 @@ export default function App() {
       <header className="site-header">
         <button
           className="wordmark"
-          onClick={() => setHome(true)}
+          onClick={() => { setCatalog(false); setHome(true); }}
           aria-label="回到开始页"
         >
           <span className="logo-cell">▰</span> ONE
@@ -162,7 +164,7 @@ export default function App() {
         </button>
         <div className="header-meta">
           <span className="live-dot" />
-          资源决策模拟器 <span className="version">v0.7.0</span>
+          资源决策模拟器 <span className="version">v1.1.2</span>
         </div>
       </header>
       {loaded.recovery && (
@@ -179,12 +181,13 @@ export default function App() {
           </button>
         </div>
       )}
-      {home || !session ? (
+      {catalog ? <CatalogScreen onBack={() => setCatalog(false)} /> : home || !session ? (
         <StartScreen
           profile={profile}
           hasSession={!!session}
           onBegin={begin}
           onContinue={() => setHome(false)}
+          onCatalog={() => setCatalog(true)}
         />
       ) : !session.player.talent ? (
         introSeen ? <TalentScreen key={session.id} session={session} onPick={pick} /> :

@@ -61,7 +61,7 @@ test('完整对局每题四项，结算返回主页后可查看记录', async ({
   await expect(page.getByTestId('player-score')).toBeVisible();
   await page.getByRole('button', {name:'返回主界面', exact:true}).click();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
-  await expect(page.getByRole('button',{name:/开始一段人生/})).toBeVisible();
+  await expect(page.getByRole('button',{name:/开启一段人生/})).toBeVisible();
   await page.getByRole('button',{name:/继续上次记录/}).click();
   await expect(page.getByTestId('player-score')).toBeVisible();
 });

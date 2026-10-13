@@ -1,13 +1,29 @@
 # 1% Battery · 最后的余量
 
+## 下载即玩 · v1.1.2
+
+| 版本 | Windows 免安装版 | 单文件 HTML 离线版 |
+|---|---|---|
+| **v1.1.2 · 变量目录与结算推导** | [下载 ZIP](https://github.com/linwu008/1-percent-of-battery-for-kskbl/releases/download/v1.1.2/1013_OnePercentBattery-Windows-x64_v1.1.2.zip) | [下载 HTML](https://github.com/linwu008/1-percent-of-battery-for-kskbl/releases/download/v1.1.2/1013_OnePercentBattery_v1.1.2.html) |
+| v1.0.0 · 原版留档 | [下载 ZIP](https://github.com/linwu008/1-percent-of-battery-for-kskbl/releases/download/v1.1.2/1013_OnePercentBattery-Windows-x64_v1.0.0.zip) | [下载 HTML](https://github.com/linwu008/1-percent-of-battery-for-kskbl/releases/download/v1.1.2/1013_OnePercentBattery_v1.0.0.html) |
+
+Windows x64：先解压整个文件夹，再双击 **OnePercentBattery.exe**。保留同目录文件即可离线运行，无需 Node 或开发服务器。存档在程序旁的 userdata 文件夹；请放在自己有写入权限的位置。程序未购买代码签名证书。
+
+HTML：下载后双击，在现代桌面浏览器打开，无需联网。存档由该浏览器保存；移动文件位置或更换浏览器可能无法读取原记录。两种形式不自动同步存档。
+
+[完整发行页与 SHA-256 校验文件](https://github.com/linwu008/1-percent-of-battery-for-kskbl/releases/tag/v1.1.2)。
+
+主页“变量目录”提供 58 条档案：资源与时间、环境、12 种策略、6 种 Ghost、成果与结算。具体评分权重仍在对局结束后揭晓；结算新增双方逐步点数、两层权重、三段概率的代入过程。v1.1.2 沿用 v1.0.0 的玩法参数与规则版本。
+
+
 > 一场地震之后，你从瓦砾里摸出手机，屏幕裂了一道，信号栏空着。
 > 屏幕上写着：**1%**。
 > 往后每一步都在花这一点电——花在哪，决定你能不能活到被找到。
 
 ![逐字打出这一局的处境](assets/screens/00-intro-typing.gif)
 
-**在线试玩：<https://one-percent-battery-v07.app.workbuddy.host/>**
-（v1.0.0 只补文档与素材，游戏内容与 v0.7.0 完全一致，因此沿用这条已验通的链接。历史版本链接见 [`app/README.md`](app/README.md)。）
+**历史网页版（v0.7.0）：<https://one-percent-battery-v07.app.workbuddy.host/>**
+（该站点不含 v1.1.2 的新增目录，最新版本请使用上方离线下载。历史版本链接见 [`app/README.md`](app/README.md)。）
 
 ---
 
@@ -254,8 +270,8 @@ Ghost 习惯、每步时长和赌运。同一局编号必然复现同一组；�
 ```sh
 cd app
 npm ci
-npm test              # 规则、时间轴、题库、平衡性：81 项
-npm run test:browser  # 浏览器实际流程：27 项（含自动刷新 README 截图）
+npm test              # 规则、时间轴、题库、平衡性及目录
+npm run test:browser  # 浏览器实际流程（含自动刷新 README 截图）
 npm run build         # 生产构建
 ```
 
@@ -279,7 +295,8 @@ npm run build         # 生产构建
 | v0.5.0 | 界面改造为灾难终端风格；剧情与选项居中，底部资源与操作栏 |
 | v0.6.0 | 天赋改称策略（先选名字再看效果）；局内每步四选项、卡内二次确认；时间改为按种子取 25/30/35 分钟 |
 | v0.7.0 | 引导流程独立成页；右侧像素电池 + 精确电量；Ghost 移至屏幕底栏；内置本地开源字体 |
-| **v1.0.0** | **交付定稿：补全本文档与界面素材。游戏规则与 v0.7.0 完全一致，未改动玩法** |
+| **v1.1.2** | **Windows与HTML离线下载、变量目录、主页入口动效、逐项概率推导；玩法参数不变** |
+| v1.0.0 | **交付定稿：补全本文档与界面素材。游戏规则与 v0.7.0 完全一致，未改动玩法** |
 
 规则版本号独立于界面版本号，v1.0.0 对应规则版本 0.6.0（v0.6.0 之后只改界面，没动规则）。
 

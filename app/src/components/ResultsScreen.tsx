@@ -22,6 +22,7 @@ import {
 } from "../game/scoring";
 import { envSummary } from "../game/world";
 import SurvivalChart from "./SurvivalChart";
+import CalculationPanel from "./CalculationPanel";
 import type { OutcomeId, Profile, Session, WeightTier } from "../game/types";
 
 const money = (n: number) => `${(n / 1000).toFixed(3)}%`;
@@ -263,6 +264,7 @@ export default function ResultsScreen({
         </section>
       </div>
 
+      <CalculationPanel session={s} />
       <section className="panel weight-panel">
         <div className="eyebrow">WEIGHTS / 权重</div>
         <h2>同样是 2 点，档位不同，分量差好几倍。</h2>

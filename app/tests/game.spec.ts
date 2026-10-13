@@ -129,7 +129,7 @@ test("中途可以放弃这一局，再重开一局", async ({ page }) => {
   await page.getByTestId("abandon").click();
   await page.getByRole("button", { name: "确定放弃并重开" }).click();
   await expect(
-    page.getByRole("button", { name: /开始一段人生/ }),
+    page.getByRole("button", { name: /开启一段人生/ }),
   ).toBeVisible();
   expect(
     await page.evaluate(() =>

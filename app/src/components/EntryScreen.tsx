@@ -11,7 +11,7 @@ export default function EntryScreen({ onEnter }: { onEnter: () => void }) {
       <h1>最后的余量</h1>
       <p>同一个世界。你的另一种可能。</p>
       <button className="entry-enter" onClick={onEnter} aria-label="进入模拟器"><span>进入模拟器</span><b aria-hidden="true">→</b></button>
-      <small>ONE PERCENT BATTERY / v0.7.0</small>
+      <small>ONE PERCENT BATTERY / v1.1.2</small>
     </div>
     <div className="entry-scene" aria-hidden="true"><StageScene hero /></div>
     <div className="entry-bottom"><span>一份电量，两种人生。</span><span>模拟能耗与概率 · 非真实救援工具</span></div>
