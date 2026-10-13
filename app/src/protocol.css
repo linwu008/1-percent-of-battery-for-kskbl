@@ -164,7 +164,12 @@ button,input { font-family:inherit; }
 .strategy-screen .strategy-ghost { display:block; max-width:650px; margin-top:36px; }
 .strategy-heading h2 { font-size:38px; }
 .start-screen .hero { padding:32px 0; gap:32px; align-items:center; }
-.start-screen .mirror-art { min-height:400px; }
+.start-screen .mirror-art { width:100%; min-width:0; min-height:440px; height:auto; aspect-ratio:5 / 4; align-self:stretch; }
+.start-screen .mirror-art .battery-object { width:clamp(168px,32%,220px); height:auto; aspect-ratio:168 / 281; flex:none; transform:none; }
+.start-screen .mirror-art .battery-cap { width:33%; height:auto; aspect-ratio:55 / 17; }
+.start-screen .mirror-art .battery-frame { width:100%; height:auto; aspect-ratio:168 / 264; }
+.start-screen .mirror-art .battery-last { width:79%; }
+.start-screen .mirror-art .art-footnote { bottom:24px; }
 .start-screen .hero-intro { margin:20px 0; line-height:1.9; }
 .start-screen .start-bottom { display:grid; grid-template-columns:1fr 1.15fr 1.6fr; gap:20px; }
 .start-bottom .how-to,.start-bottom .ghost-intro,.start-bottom .demo-intro { margin:0; padding:22px; border:1px solid #35463d; background:#141c17; max-width:none; }
@@ -239,7 +244,7 @@ button,input { font-family:inherit; }
   .intro-screen,.strategy-screen { padding:26px 0; }
   .start-screen .start-bottom { grid-template-columns:1fr; }
   .start-bottom .demo-intro { grid-column:auto; }
-  .start-screen .mirror-art { min-height:300px; }
+  .start-screen .mirror-art { min-height:320px; height:auto; aspect-ratio:6 / 5; }
   .terminal-screen .game-columns { grid-template-columns:1fr; }
   .player-battery-panel { order:-1; flex-direction:row; justify-content:space-between; gap:12px; padding:14px; }
   .player-battery-panel>.eyebrow { margin:0; max-width:85px; line-height:1.7; }
