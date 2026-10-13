@@ -22,6 +22,11 @@ HTML：下载后双击，在现代桌面浏览器打开，无需联网。存档�
 
 ![逐字打出这一局的处境](assets/screens/00-intro-typing.gif)
 
+**演示视频**（2 分 54 秒，从开场到结算的完整一局）：
+[`assets/1pct-battery-v1.0.0-demo.mp4`](assets/1pct-battery-v1.0.0-demo.mp4)
+—— 真实浏览器录制，未做后期剪辑；节奏跟着打字机与结算推进。视频录制于 v1.0.0，
+本版沿用 v1.0.0 的玩法参数与规则版本，界面除主页新增「变量目录」外与视频一致。
+
 **历史网页版（v0.7.0）：<https://one-percent-battery-v07.app.workbuddy.host/>**
 （该站点不含 v1.1.2 的新增目录，最新版本请使用上方离线下载。历史版本链接见 [`app/README.md`](app/README.md)。）
 
