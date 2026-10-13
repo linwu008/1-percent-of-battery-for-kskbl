@@ -1,8 +1,18 @@
-# 1% Battery · v0.7.0
+# 1% Battery · v1.0.0
 
 灾后资源决策模拟器：在最后 **1.000%** 电量内做出选择，与采用日常行为习惯的 Ghost 对照资源消耗和模拟结果。Ghost 不是最优解，也不保证玩家获胜。
 
+- 项目全貌——为什么这样做、与赛题和相近作品的关系、带图的操作演示：见[仓库根 README](../README.md)。
+- 界面素材在 `../assets/screens/`，由 `tests/shots.spec.ts` 在跑浏览器测试时自动重新生成。
+
+![局内界面](../assets/screens/06-event.png)
+
 ## 本版变化
+
+**v1.0.0（本版）**：补全交付文档与界面素材，并修掉一条在慢机器上会超时的平衡性测试。
+**游戏规则与界面和 v0.7.0 完全一致，未改动任何玩法数值。**
+
+v0.7.0 的界面改动：
 
 - 流程为初始剧情 → 独立策略页 → 对局；再次点击同一策略会收起说明，确认后生效。
 - 剧情和四选项在左，右侧仅玩家电量：20格像素电池表示最后1%的剩余预算，另保留精确百分比。
@@ -26,9 +36,15 @@ npm run test:browser
 npm run build
 ```
 
-浏览器打开 Vite 输出的地址。应用完全在浏览器内运行，不需要云API、账号、真实短信或定位权限。依赖首次安装需要网络。浏览器测试默认使用Edge；若改用Chromium，先安装Playwright Chromium并设置`PLAYWRIGHT_CHANNEL=chromium`。
+浏览器打开 Vite 输出的地址。应用完全在浏览器内运行；依赖首次安装需要网络。浏览器测试默认使用Edge；若改用Chromium，先安装Playwright Chromium并设置`PLAYWRIGHT_CHANNEL=chromium`。
 
-本版预览与交付状态见 [交付说明](../content/1013_v07交付说明_v1.md)。历史独立地址保持不动：
+当前 v1.0.0 的验证结果：单元与规则测试 **81 项通过**，浏览器验收 **27 项通过**
+（其中 `tests/shots.spec.ts` 会在测试过程中刷新 `assets/screens/` 的界面截图），
+`tsc -b` 与生产构建通过。规则层测试跑 `npm test` 即可，其中事后最优参考线那一条
+需要 40 个种子 × beam 搜索，已单独放宽超时（慢机器上约 7 秒），不要靠调小种子数让它"变快"。
+
+本版预览与交付状态见 [交付说明](../content/1013_v10交付说明_v1.md)。历史独立地址保持不动：
+- v0.7：https://one-percent-battery-v07.app.workbuddy.host/ （v1.0.0 沿用它，内容一致）
 - v0.4：https://one-percent-battery-v4.app.workbuddy.host/
 - v0.3：https://one-percent-battery-v3.app.workbuddy.host/
 - v0.2：https://one-percent-battery.app.workbuddy.host/

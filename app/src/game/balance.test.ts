@@ -152,7 +152,9 @@ describe("平衡性：存活概率（v0.4.0）", () => {
     const mean = ps.reduce((a, b) => a + b, 0) / ps.length;
     expect(mean, `事后最优均值 ${(mean * 100).toFixed(1)}%`).toBeGreaterThan(0.65);
     expect(mean, `事后最优均值 ${(mean * 100).toFixed(1)}%`).toBeLessThan(0.76);
-  });
+    // 40 个种子 × beam 搜索在慢机器上会超过 vitest 默认的 5s。这不是功能问题，
+    // 是这条断言本身算得久，所以单独放宽它的超时，不要靠调小种子数来"让它过"。
+  }, 60000);
 
   it("三种打法都拿不到接近 100% 的存活概率", () => {
     for (const [name, pick] of [
