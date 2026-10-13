@@ -99,17 +99,11 @@ export default function ResultsScreen({
                 : "相同的起点，留下了接近的结果。下一次，换一种花法试试。"}
           </p>
         </div>
-        <div className="result-delta">
-          <span>相对 Ghost</span>
-          <strong>
-            {result.delta > 0 ? "+" : ""}
-            {result.delta.toFixed(1)}
-            <small> 个百分点</small>
-          </strong>
-          <small>
-            规则 {s.world.version} · 跨版本历史最高存活概率 {pct(best)}
-          </small>
-        </div>
+        <dl className="result-summary">
+          <div><dt>相对 Ghost 存活概率</dt><dd>{result.delta > 0 ? '高 ' : result.delta < 0 ? '低 ' : '持平 '}
+            <b>{Math.abs(result.delta).toFixed(1)}</b><span> 个百分点</span></dd></div>
+          <div><dt>历史最高存活概率（跨版本）</dt><dd><b>{pct(best)}</b></dd></div>
+        </dl>
       </div>
 
       <div className="score-grid">
@@ -518,11 +512,10 @@ export default function ResultsScreen({
 function Bar({ label, v }: { label: string; v: number }) {
   return (
     <div className="sbar">
-      <small>{label}</small>
+      <div className="sbar-heading"><span>{label}</span><b>{pct(v)}</b></div>
       <div className="sbar-track">
         <i style={{ width: `${Math.min(100, v * 100)}%` }} />
       </div>
-      <b>{pct(v)}</b>
     </div>
   );
 }

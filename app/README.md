@@ -1,18 +1,17 @@
-# 1% Battery · v0.6.0
+# 1% Battery · v0.7.0
 
 灾后资源决策模拟器：在最后 **1.000%** 电量内做出选择，与采用日常行为习惯的 Ghost 对照资源消耗和模拟结果。Ghost 不是最优解，也不保证玩家获胜。
 
 ## 本版变化
 
-- 新增独立进入页，点击后进入主界面；主界面包含紧凑玩法说明。
-- 天赋改为策略：本局给出三个名称，选中后展示功能与确认按钮。Ghost 自动选择自己的策略，开局公开。
-- 130 道题全部有四个选项。新增129条情境专属第四路线，原前三项的下标保持不变。
-- 行动先点击选中，再点击同一选项或卡内确认按钮执行。底部只保留资源和行动/信息/记录切换。
-- 剧情框显示钟表时间，每步按种子推进25、30或35分钟。阅读与思考不计时；跨午夜显示次日。
-- 结算新增返回主界面，保留重开、同局再试、导出和完整复盘。
-- 入口、主页、结算与局内采用直角薄边框、深灰绿、薄荷绿与橙金选中态；原创CSS/SVG，无商业游戏素材。
+- 流程为初始剧情 → 独立策略页 → 对局；再次点击同一策略会收起说明，确认后生效。
+- 剧情和四选项在左，右侧仅玩家电量：20格像素电池表示最后1%的剩余预算，另保留精确百分比。
+- Ghost 移至屏幕底部，保持前一步结果的对照方式；上一步行动回声在剧情区可展开。
+- 主页保留主要入口、简短玩法、独立 Ghost 介绍与固定案例。
+- 结算将相对 Ghost 差值和跨版本历史最高分成两行；分段概率的数值靠近标签。
+- 规则与题库保持 v0.6.0，现有存档继续兼容；本版仅升级界面版本。
 
-视觉与交互研究参考 [Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol) 的标题、大厅、结算和选择界面。没有复制其源码或素材。中文字体使用本机可用的 Noto Sans SC / PingFang SC / Microsoft YaHei，数字使用 Bahnschrift / Arial Narrow / Consolas 回退，不下载专有字体。
+视觉参考 [Stronghold-Protocol](https://github.com/sganggs/Stronghold-Protocol)。未复制游戏素材；本地附带 OFL 许可 Rajdhani 数字字体与 Noto Sans SC 字符子集，许可与来源见 public/fonts/README.md。
 
 ## 启动与验证
 
@@ -29,7 +28,7 @@ npm run build
 
 浏览器打开 Vite 输出的地址。应用完全在浏览器内运行，不需要云API、账号、真实短信或定位权限。依赖首次安装需要网络。浏览器测试默认使用Edge；若改用Chromium，先安装Playwright Chromium并设置`PLAYWRIGHT_CHANNEL=chromium`。
 
-本版预览与交付状态见 [交付说明](../content/1013_v06交付说明_v1.md)。历史独立地址保持不动：
+本版预览与交付状态见 [交付说明](../content/1013_v07交付说明_v1.md)。历史独立地址保持不动：
 - v0.4：https://one-percent-battery-v4.app.workbuddy.host/
 - v0.3：https://one-percent-battery-v3.app.workbuddy.host/
 - v0.2：https://one-percent-battery.app.workbuddy.host/
@@ -75,9 +74,9 @@ npm run build
 - `content/questions.ts`、`content/bank/`、`content/fourthOptions.ts`：130题×4项。
 - `content/talents.ts`：12种策略，保留内部ID。
 - `src/components/`：入口、主页、策略、剧情行动、Ghost、结算。
-- `src/protocol.css`：v0.6视觉层；`tests/`为浏览器验收。
+- `src/protocol.css`：v0.7视觉层；`tests/`为浏览器验收。
 
-所有耗电和概率均为模拟，不是设备实测或真实救援预测。3–5分钟为体验目标。main保持旧基线，各版本单独分支，v0.6从v0.5提交551a29d开始。
+所有耗电和概率均为模拟，不是设备实测或真实救援预测。3–5分钟为体验目标。main保持旧基线，各版本单独分支，v0.7从v0.6提交e642a1e开始。
 
 ### v0.6 审查补充
 

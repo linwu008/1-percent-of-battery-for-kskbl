@@ -146,3 +146,114 @@ button,input { font-family:inherit; }
   .result-actions button { flex:1 1 100%; }
 }
 @media(prefers-reduced-motion:reduce) { .entry-radar i,.strategy-detail,.choice-confirm { animation:none; } }
+
+/* v0.7: 阅读 → 策略 → 行动；右侧仅电量，世界镜像归到底栏。 */
+@font-face { font-family:Reserve Sans; src:url('/fonts/ReserveSans.woff2') format('woff2'); font-weight:100 900; font-display:swap; }
+@font-face { font-family:Rajdhani; src:url('/fonts/Rajdhani-SemiBold.ttf') format('truetype'); font-weight:600; font-display:swap; }
+:root { font-family:'Reserve Sans','Noto Sans SC','Microsoft YaHei',sans-serif; }
+.hero-number,.score-card>strong,.resource-bar strong,.ghost-stats strong,.entry-emblem,.player-energy,.result-summary b,.sbar b { font-family:Rajdhani,'Reserve Sans',sans-serif; font-variant-numeric:tabular-nums; }
+.intro-screen,.strategy-screen { max-width:1080px; margin:0 auto; padding:44px 0; min-height:calc(100dvh - 160px); }
+.page-reveal { animation:protocol-reveal .22s ease-out; }
+.intro-screen .brief-head { margin-bottom:28px; }
+.intro-world { margin:24px 0; }
+.intro-world h2 { font-size:17px; margin-bottom:14px; }
+.intro-world p { font-size:14px; color:#b9c7bf; margin-top:16px; }
+.intro-actions { display:flex; justify-content:flex-end; margin-top:28px; }
+.intro-actions .primary { min-width:220px; }
+.strategy-screen .talent-pick { margin:32px 0; min-height:300px; }
+.strategy-screen .strategy-ghost { display:block; max-width:650px; margin-top:36px; }
+.strategy-heading h2 { font-size:38px; }
+.start-screen .hero { padding:32px 0; gap:32px; align-items:center; }
+.start-screen .mirror-art { min-height:400px; }
+.start-screen .hero-intro { margin:20px 0; line-height:1.9; }
+.start-screen .start-bottom { display:grid; grid-template-columns:1fr 1.15fr 1.6fr; gap:20px; }
+.start-bottom .how-to,.start-bottom .ghost-intro,.start-bottom .demo-intro { margin:0; padding:22px; border:1px solid #35463d; background:#141c17; max-width:none; }
+.start-bottom h2 { font-size:18px; margin:0 0 12px; line-height:1.7; }
+.start-bottom .how-to h2 { font-size:18px; letter-spacing:1px; }
+.start-bottom p { font-size:14px; color:#c7d2cb; line-height:1.9; }
+.start-bottom .panel-kicker,.start-bottom .eyebrow { margin-bottom:14px; }
+.start-bottom .demo-button { padding:12px; margin-top:10px; }
+.start-bottom .demo-button strong { font-size:14px; }
+.start-bottom .demo-button small { display:none; }
+.terminal-screen .game-columns { grid-template-columns:minmax(0,1fr) 260px; align-items:stretch; }
+.player-battery-panel { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px 18px; min-width:0; background:linear-gradient(180deg,#1e3227,#111b16); }
+.player-battery-panel>.eyebrow { align-self:flex-start; color:#aad9c2; font-size:12px; margin-bottom:32px; }
+.pixel-battery { width:140px; margin:0 auto 28px; }
+.pixel-battery-cap { width:54px; height:12px; margin:auto; background:#c3dfcf; }
+.pixel-battery-body { padding:10px; border:5px solid #c3dfcf; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; background:#0a100d; box-shadow:8px 8px 0 #0004; }
+.pixel-cell { display:block; height:27px; background:#213329; }
+.pixel-cell.lit { background:#4ed8af; box-shadow:inset 0 3px #95ffe038; }
+.pixel-battery.low .pixel-cell.lit { background:#ffc600; }
+.player-energy { font-size:52px; font-weight:600; line-height:1; color:#d7f8e7; white-space:nowrap; }
+.battery-caption-text { font-size:13px; color:#c1d0c7; margin-top:12px; }
+.terminal-screen .action-echo { padding:8px 0 0; margin-top:8px; border-top:1px solid #35463d; background:none; }
+.action-echo summary { color:#c8d8ce; font-size:12px; cursor:pointer; }
+.terminal-screen .action-echo p { font-size:12px; margin:8px 0; }
+.terminal-screen .decision-dock { display:grid; grid-template-columns:1fr 1.15fr; margin-top:18px; box-shadow:none; border-color:#45574c; }
+.terminal-screen .resource-bar { grid-column:1; grid-row:1; grid-template-columns:.7fr 1fr; padding:14px 20px; gap:16px; border-bottom:1px solid #3d5144; }
+.terminal-screen .resource-bar .selected-preview { border:0; padding-top:0; }
+.terminal-screen .resource-bar strong { font-size:25px; }
+.terminal-screen .decision-controls { grid-column:1; grid-row:2; }
+.terminal-screen .decision-dock .ghost-card { grid-column:2; grid-row:1 / 3; margin:0; border:0; border-left:1px solid #45574c; padding:16px 22px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 20px; align-content:center; background:#18221c; }
+.terminal-screen .decision-dock .ghost-card .panel-kicker { grid-column:1; grid-row:1; font-size:11px; margin:0; }
+.terminal-screen .decision-dock .ghost-identity { grid-column:1; grid-row:2; padding:0; }
+.terminal-screen .decision-dock .ghost-identity small { display:none; }
+.terminal-screen .decision-dock .ghost-identity h2 { font-size:20px; margin:4px 0; }
+.terminal-screen .decision-dock .ghost-persona { grid-column:1 / -1; grid-row:4; font-size:12px; min-height:0; margin:0; line-height:1.6; }
+.terminal-screen .decision-dock .ghost-strategy { grid-column:1; grid-row:3; padding:0; margin:0; }
+.terminal-screen .decision-dock .ghost-stats { grid-column:2; grid-row:1 / 3; border:0; padding:0; margin:0; gap:16px; }
+.terminal-screen .decision-dock .ghost-stats strong { font-size:26px; }
+.terminal-screen .decision-dock .ghost-foot { grid-column:2; grid-row:3; font-size:11px; margin:0; }
+.result-top { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,.9fr); gap:36px; }
+.result-top>div { min-width:0; }
+.result-summary { margin:0; display:grid; gap:18px; min-width:0; padding-left:28px; border-left:1px solid #45624f; }
+.result-summary>div { min-width:0; }
+.result-summary dt { font-size:16px; font-weight:600; color:#e2eee7; margin-bottom:4px; }
+.result-summary dd { margin:0; display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; font-size:18px; color:var(--mint); }
+.result-summary dd b { font-size:34px; line-height:1.2; }
+.result-summary dd span { font-size:16px; }
+.score-card>div.survival-bars { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; padding-top:20px; margin-top:18px; border-top:1px solid #4c6355; }
+.survival-bars .sbar { display:block; min-width:0; }
+.sbar-heading { display:flex; align-items:baseline; flex-wrap:wrap; gap:7px; margin-bottom:8px; }
+.sbar-heading span { font-size:15px; color:#e0ece4; }
+.sbar-heading b { font-size:23px; width:auto; text-align:left; color:#f0f7f3; margin-left:0; float:none; }
+.ghost-card .panel-kicker>.ghost-dot,.ghost-intro .panel-kicker>.ghost-dot { margin-left:0; padding:0; border:0; }
+.sbar-track { height:4px; width:100%; }
+@media(max-width:1050px) {
+  .start-screen .start-bottom { grid-template-columns:1fr 1fr; }
+  .start-bottom .demo-intro { grid-column:1 / -1; }
+  .result-top { grid-template-columns:1fr; gap:24px; }
+  .result-summary { padding:22px 0 0; border-left:0; border-top:1px solid #45624f; }
+}
+@media(max-width:900px) {
+  .terminal-screen .game-columns { display:grid; grid-template-columns:minmax(0,1fr) 180px; order:2; gap:14px; }
+  .terminal-screen .event-panel { order:0; }
+  .player-battery-panel { padding:20px 12px; justify-content:flex-start; }
+  .player-battery-panel>.eyebrow { font-size:10px; margin-bottom:24px; }
+  .pixel-battery { width:116px; }
+  .pixel-cell { height:21px; }
+  .player-energy { font-size:38px; }
+  .terminal-screen .decision-dock { order:3; }
+}
+@media(max-width:650px) {
+  .intro-screen,.strategy-screen { padding:26px 0; }
+  .start-screen .start-bottom { grid-template-columns:1fr; }
+  .start-bottom .demo-intro { grid-column:auto; }
+  .start-screen .mirror-art { min-height:300px; }
+  .terminal-screen .game-columns { grid-template-columns:1fr; }
+  .player-battery-panel { order:-1; flex-direction:row; justify-content:space-between; gap:12px; padding:14px; }
+  .player-battery-panel>.eyebrow { margin:0; max-width:85px; line-height:1.7; }
+  .pixel-battery { width:52px; margin:0; }
+  .pixel-battery-cap { width:22px; height:5px; }
+  .pixel-battery-body { padding:3px; border-width:2px; gap:2px; box-shadow:3px 3px 0 #0004; }
+  .pixel-cell { height:7px; }
+  .player-energy { font-size:34px; }
+  .battery-caption-text { display:none; }
+  .terminal-screen .decision-dock { display:flex; flex-direction:column; }
+  .terminal-screen .decision-dock .ghost-card { border-left:0; border-top:1px solid #45574c; padding:16px; }
+  .terminal-screen .resource-bar .selected-preview { grid-column:auto; }
+  .score-card>div.survival-bars { grid-template-columns:1fr; gap:12px; }
+  .sbar-heading { margin-bottom:5px; }
+  .strategy-heading h2 { font-size:30px; }
+  .results-screen .result-actions button { flex:1 1 100%; width:100%; min-width:0; white-space:nowrap; }
+}

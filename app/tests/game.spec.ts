@@ -4,6 +4,8 @@ async function enter(page: Page) {
   await page.getByRole('button', { name: '进入模拟器' }).click();
 }
 async function chooseStrategy(page: Page) {
+  await page.locator(".backdrop-card").click();
+  await page.getByRole("button", {name:"继续 · 选择策略"}).click();
   await page.locator('.talent-card').first().click();
   await page.getByRole('button', { name: '确认选择', exact: true }).click();
 }
@@ -119,7 +121,7 @@ test("开局先把处境讲清楚，玩家才看得懂题", async ({ page }) => 
   const skip = page.getByRole("button", { name: /跳过这段/ });
   if (await skip.isVisible()) await skip.click();
   await expect(card).toContainText("还剩 1.000%");
-  await expect(card).toContainText("25–35 分钟");
+  await expect(page.locator('.intro-world')).toContainText("25–35 分钟");
 });
 
 test("中途可以放弃这一局，再重开一局", async ({ page }) => {
@@ -259,7 +261,7 @@ test("窄屏下没有横向滚动", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await enter(page);
   await page.getByRole("button", { name: /案例 A/ }).click();
-  await expect(page.locator(".talent-card").first()).toBeVisible();
+  await expect(page.locator(".backdrop-card")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -304,8 +306,8 @@ test("桌面选项可滚到无遮挡处，窄屏确认紧跟选项", async ({ pa
   const dock = (await page.locator(".decision-dock").boundingBox())!;
   expect(box.y + box.height).toBeLessThanOrEqual(dock.y);
   await page.setViewportSize({ width: 390, height: 844 });
-  const mobileDock = (await page.locator(".decision-dock").boundingBox())!;
-  const ghost = (await page.locator(".game-aside").boundingBox())!;
+  const mobileDock = (await page.locator(".decision-controls").boundingBox())!;
+  const ghost = (await page.locator(".ghost-card").boundingBox())!;
   expect(mobileDock.y + mobileDock.height).toBeLessThanOrEqual(ghost.y);
 });
 

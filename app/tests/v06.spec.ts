@@ -7,6 +7,8 @@ async function lobby(page: Page) {
 async function run(page: Page) {
   await lobby(page);
   await page.getByRole('button', { name: /案例 A/ }).click();
+  await page.locator('.backdrop-card').click();
+  await page.getByRole('button', {name:'继续 · 选择策略'}).click();
   await page.locator('.talent-card').first().click();
   await page.getByRole('button', { name: '确认选择', exact: true }).click();
   await page.locator('.event-story').click();
@@ -16,6 +18,8 @@ test('入口到主页，策略先选名称再显示效果与确认，Ghost自动
   await lobby(page);
   await expect(page.getByText('玩法说明', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /案例 A/ }).click();
+  await page.locator('.backdrop-card').click();
+  await page.getByRole('button', {name:'继续 · 选择策略'}).click();
   await expect(page.getByRole('heading', { name: '请选择策略' })).toBeVisible();
   await expect(page.locator('.talent-card')).toHaveCount(3);
   await expect(page.getByRole('button', { name: '确认选择', exact: true })).toHaveCount(0);

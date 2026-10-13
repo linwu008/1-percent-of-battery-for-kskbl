@@ -10,6 +10,7 @@ import { summarize } from "../game/scoring";
 import { envSummary } from "../game/world";
 import { useTypewriter } from "./useTypewriter";
 import DecisionControls, { type DecisionView } from "./DecisionControls";
+import PixelBattery from "./PixelBattery";
 import StageScene from "./StageScene";
 import type { OutcomeId, Session } from "../game/types";
 
@@ -145,6 +146,7 @@ export default function EventScreen({
             <button className="skip-type" onClick={typed.skip} disabled={typed.done}>
               {typed.done ? "剧情已显示 · 请选择行动" : "点击正文或 Enter · 跳过这段 ▸"}
             </button>
+            {last && <details className="last-action action-echo"><summary>上一步 · {last.label}</summary><p>{last.note}</p></details>}
           </div>
 
           {view === "action" && <div className="choices" aria-label="可选行动">
@@ -203,34 +205,15 @@ export default function EventScreen({
           </section>}
         </section>
 
-        <aside className="game-aside">
-          <div className="ghost-card panel">
-            <div className="panel-kicker"><span className="ghost-dot" /> GHOST / 世界镜像</div>
-            <div className="ghost-emblem" aria-hidden="true"><span>G</span><i /><i /><i /></div>
-            <div className="ghost-identity"><small>本局行为习惯</small><h2>{persona?.name ?? "另一个你"}</h2></div>
-            <p className="ghost-persona">{persona?.note}</p>
-            <p className="ghost-strategy">策略 / {TALENT_BY_ID[w.ghostTalent]?.name}</p>
-            <div className="ghost-stats"><div><small>剩余电量</small><strong>{money(s.ghost.energy)}</strong></div>
-              <div><small>成果价值</small><strong>{ghost.value}</strong></div></div>
-            <div className="ghost-meter"><i style={{ width: `${s.ghost.energy / 10}%` }} /></div>
-            <div className="ghost-foot"><span className="ghost-dot" /> 已同步 {s.ghost.answers.length} 步</div>
-            <p className="ghost-disclaimer">同一起点，另一种习惯。<br />它的下一步，仍未揭晓。</p>
-          </div>
-          <div className="last-action panel" aria-live="polite">
-            <span className="eyebrow">LAST TRANSMISSION / 行动回声</span>
-            {last ? <><h3>{last.label}</h3><p>{last.note}</p>
-              <div className="last-cost"><span>行动 −{money(last.cost)}</span><span>自然 −{money(last.idleDrain)}</span></div>
-              <small>{clockLabel(w, last.minutes)} · 行动已记录</small></> :
-              <><h3>一份电量，两种人生。</h3><p>你还没有行动。选项会告诉你代价，结果要由你亲手换来。</p></>}
-          </div>
-          <div className="aside-foot"><span>模拟实验 / DECISION SIMULATION</span><span>你的时间，由你的决定推进。</span></div>
+        <aside className="player-battery-panel panel" aria-label="玩家电量">
+          <span className="eyebrow">YOU / 最后的余量</span>
+          <PixelBattery energy={s.player.energy} />
+          <strong className="player-energy" data-testid="battery">{money(s.player.energy)}</strong>
+          <span className="battery-caption-text">{s.player.energy === 0 ? '设备已关机' : '初始电量 1.000%'}</span>
         </aside>
       </div>
       <div className="decision-dock">
         <div className={"resource-bar" + (s.player.energy === 0 ? " battery-off" : "")}>
-          <div className="battery-stat"><span className="stat-label">{s.player.energy === 0 ? "设备已关机" : "最后 1% 的余量"}</span>
-            <strong data-testid="battery">{money(s.player.energy)}<small> / 1.000%</small></strong>
-            <div className="energy-track"><i style={{ width: `${s.player.energy / 10}%` }} /></div></div>
           <div><span className="stat-label">成果价值</span><strong data-testid="value">{me.value}<small> / 12</small></strong>
             <div className="outcome-dots">{(Object.keys(OUTCOME_WEIGHTS) as OutcomeId[]).map((k) =>
               <i key={k} className={s.player.delivered[k] ? "on" : ""} title={OUTCOME_LABELS[k]} />)}</div></div>
@@ -239,6 +222,16 @@ export default function EventScreen({
             <small>自然损耗 {money(idle)} / 步</small></div>
         </div>
         <DecisionControls view={view} onView={setView} />
+          <div className="ghost-card panel">
+            <div className="panel-kicker"><span className="ghost-dot" /> GHOST / 世界镜像</div>
+            <div className="ghost-identity"><small>本局行为习惯</small><h2>{persona?.name ?? "另一个你"}</h2></div>
+            <p className="ghost-persona">{persona?.note}</p>
+            <p className="ghost-strategy">策略 / {TALENT_BY_ID[w.ghostTalent]?.name}</p>
+            <div className="ghost-stats"><div><small>剩余电量</small><strong>{money(s.ghost.energy)}</strong></div>
+              <div><small>成果价值</small><strong>{ghost.value}</strong></div></div>
+            <div className="ghost-foot"><span className="ghost-dot" /> 已同步 {s.ghost.answers.length} 步</div>
+          </div>
+
       </div>
     </main>
   );

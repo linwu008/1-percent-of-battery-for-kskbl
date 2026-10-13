@@ -17,9 +17,11 @@ import TalentScreen from "./components/TalentScreen";
 import EventScreen from "./components/EventScreen";
 import ResultsScreen from "./components/ResultsScreen";
 import EntryScreen from "./components/EntryScreen";
+import IntroScreen from "./components/IntroScreen";
 
 export default function App() {
   const [entered, setEntered] = useState(false);
+  const [introSeen, setIntroSeen] = useState(false);
   const [loaded] = useState(loadSession);
   const [session, setSession] = useState<Session | null>(loaded.session);
   const [profile, setProfile] = useState<Profile>(loadProfile);
@@ -74,6 +76,7 @@ export default function App() {
   };
 
   const begin = (preset?: "A" | "B") => {
+    setIntroSeen(false);
     // 固定案例连种子一起固定，演示和比较才对得上；随机局才用新种子。
     const seed = preset ? `case-${preset}` : crypto.randomUUID().slice(0, 8);
     const world = createWorld(seed, preset);
@@ -84,6 +87,7 @@ export default function App() {
 
   const replay = () => {
     if (!session) return;
+    setIntroSeen(false);
     const world = createWorld(session.world.seed, session.world.preset);
     setSession(createSession(world));
     setError(null);
@@ -158,7 +162,7 @@ export default function App() {
         </button>
         <div className="header-meta">
           <span className="live-dot" />
-          资源决策模拟器 <span className="version">v0.6.0</span>
+          资源决策模拟器 <span className="version">v0.7.0</span>
         </div>
       </header>
       {loaded.recovery && (
@@ -183,7 +187,8 @@ export default function App() {
           onContinue={() => setHome(false)}
         />
       ) : !session.player.talent ? (
-        <TalentScreen key={session.id} session={session} onPick={pick} instant={instant} onToggleInstant={toggleInstant} />
+        introSeen ? <TalentScreen key={session.id} session={session} onPick={pick} /> :
+        <IntroScreen key={session.id} session={session} instant={instant} onToggleInstant={toggleInstant} onContinue={() => setIntroSeen(true)} />
       ) : isDone(session) ? (
         <ResultsScreen
           session={session}
